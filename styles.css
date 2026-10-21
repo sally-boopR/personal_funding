@@ -3966,6 +3966,40 @@ body:not(.is-admin-mode) .admin-only-ui {
   z-index: 10;
 }
 
+.bunny-sound-toggle-btn {
+  position: absolute;
+  top: -12px;
+  left: 6px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 1.5px solid var(--pink-main);
+  color: var(--pink-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(169, 101, 117, 0.25);
+  transition: all 0.2s ease;
+  z-index: 10;
+  font-size: 0.92rem;
+  line-height: 1;
+  user-select: none;
+}
+
+.bunny-sound-toggle-btn:hover {
+  background: var(--pink-main);
+  color: #FFFFFF;
+  transform: scale(1.08);
+}
+
+.bunny-sound-toggle-btn.is-muted {
+  border-color: #D4B6BE;
+  background: #F9F2F4;
+  opacity: 0.85;
+}
+
 .bunny-close-btn:hover {
   background: var(--pink-main);
   color: #FFFFFF;

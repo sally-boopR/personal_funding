@@ -4295,10 +4295,112 @@
     }) || null;
   }
 
+  // =========================================================================
+  // FANFARE SOUND EFFECT MANAGER (토끼 축하 팡파르 효과음)
+  // =========================================================================
+  const FANFARE_AUDIO_SRC = './freesound_community-064034_fasching-fanfare-47823.mp3';
+  const FANFARE_DEFAULT_VOLUME = 0.42;
+  const CELEBRATION_SOUND_STORAGE_KEY = 'pf_celebration_sound_enabled';
+  let fanfareAudio = null;
+  let fanfareFadeInterval = null;
+
+  function isCelebrationSoundEnabled() {
+    try {
+      return localStorage.getItem(CELEBRATION_SOUND_STORAGE_KEY) !== '0';
+    } catch (e) {
+      return true;
+    }
+  }
+
+  function setCelebrationSoundEnabled(enabled) {
+    try {
+      localStorage.setItem(CELEBRATION_SOUND_STORAGE_KEY, enabled ? '1' : '0');
+    } catch (e) {}
+    updateSoundToggleButtonUI();
+  }
+
+  function updateSoundToggleButtonUI() {
+    const btn = document.getElementById('bunnySoundToggleBtn');
+    const icon = document.getElementById('bunnySoundIcon');
+    const enabled = isCelebrationSoundEnabled();
+    if (btn) {
+      btn.classList.toggle('is-muted', !enabled);
+      btn.setAttribute('aria-label', enabled ? '효과음 끄기' : '효과음 켜기');
+      btn.title = enabled ? '효과음 끄기' : '효과음 켜기';
+    }
+    if (icon) {
+      icon.textContent = enabled ? '🔊' : '🔇';
+    }
+  }
+
+  function playCelebrationFanfare() {
+    stopCelebrationFanfare(false);
+    if (!isCelebrationSoundEnabled()) return;
+
+    try {
+      if (!fanfareAudio) {
+        fanfareAudio = new Audio(FANFARE_AUDIO_SRC);
+        fanfareAudio.preload = 'auto';
+      }
+      fanfareAudio.pause();
+      fanfareAudio.currentTime = 0;
+      fanfareAudio.volume = FANFARE_DEFAULT_VOLUME;
+      const playPromise = fanfareAudio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          // 브라우저의 자동재생 제한(Autoplay policy) 시 무음으로 부드럽게 넘김
+          console.warn('Fanfare autoplay prevented by browser policy:', err);
+        });
+      }
+    } catch (e) {
+      console.warn('Error playing fanfare audio:', e);
+    }
+  }
+
+  function stopCelebrationFanfare(smooth = true) {
+    if (fanfareFadeInterval) {
+      clearInterval(fanfareFadeInterval);
+      fanfareFadeInterval = null;
+    }
+    if (!fanfareAudio) return;
+
+    if (!smooth) {
+      try {
+        fanfareAudio.pause();
+        fanfareAudio.currentTime = 0;
+        fanfareAudio.volume = FANFARE_DEFAULT_VOLUME;
+      } catch (e) {}
+      return;
+    }
+
+    // 약 350ms 동안 볼륨을 단계적으로 낮추며 자연스러운 페이드아웃
+    const stepTime = 35;
+    const stepDec = fanfareAudio.volume / (350 / stepTime);
+    fanfareFadeInterval = setInterval(() => {
+      if (!fanfareAudio) {
+        clearInterval(fanfareFadeInterval);
+        fanfareFadeInterval = null;
+        return;
+      }
+      if (fanfareAudio.volume > stepDec) {
+        fanfareAudio.volume = Math.max(0, fanfareAudio.volume - stepDec);
+      } else {
+        clearInterval(fanfareFadeInterval);
+        fanfareFadeInterval = null;
+        try {
+          fanfareAudio.pause();
+          fanfareAudio.currentTime = 0;
+          fanfareAudio.volume = FANFARE_DEFAULT_VOLUME;
+        } catch (e) {}
+      }
+    }, stepTime);
+  }
+
   function closeBunnyCelebration() {
     clearTimeout(bunnyCelebrationTimer1);
     clearTimeout(bunnyCelebrationTimer2);
     clearTimeout(bunnyCelebrationTimer3);
+    stopCelebrationFanfare(false);
     const overlay = document.getElementById('bunnyCelebrationOverlay');
     const dialog = document.getElementById('bunnyCelebrationDialog');
     if (dialog) dialog.classList.remove('is-animating', 'is-triumph', 'is-fading-out');
@@ -4333,6 +4435,10 @@
     void dialog.offsetWidth;
 
     dialog.classList.add('is-animating');
+    updateSoundToggleButtonUI();
+
+    // 2. 토끼가 화면에 나타나는 바로 그 순간 팡파르 재생 시작!
+    playCelebrationFanfare();
 
     // 2.3s: Triumph victory pose (arms raised with drumsticks, laughing eyes, happy smile, confetti!)
     bunnyCelebrationTimer1 = setTimeout(() => {
@@ -4340,9 +4446,10 @@
       launchConfetti();
     }, 2300);
 
-    // 3.6s: Soft fade-out slide down
+    // 3.6s: Soft fade-out slide down & 4. 토끼 퇴장 시 팡파르 소리도 자연스럽게 페이드아웃
     bunnyCelebrationTimer2 = setTimeout(() => {
       dialog.classList.add('is-fading-out');
+      stopCelebrationFanfare(true);
     }, 3600);
 
     // 4.0s: Clean up and hide
@@ -5302,7 +5409,25 @@
       });
     }
 
-    // Bunny 100% Celebration Close Events
+    // Bunny 100% Celebration Sound Toggle & Close Events
+    const bunnySoundToggleBtn = document.getElementById('bunnySoundToggleBtn');
+    if (bunnySoundToggleBtn) {
+      updateSoundToggleButtonUI();
+      bunnySoundToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const currentlyEnabled = isCelebrationSoundEnabled();
+        const nextState = !currentlyEnabled;
+        setCelebrationSoundEnabled(nextState);
+        if (nextState) {
+          playCelebrationFanfare();
+          showToast('🔊 축하 효과음이 켜졌습니다');
+        } else {
+          stopCelebrationFanfare(false);
+          showToast('🔇 축하 효과음이 꺼졌습니다');
+        }
+      });
+    }
+
     const bunnyCloseBtn = document.getElementById('bunnyCloseBtn');
     if (bunnyCloseBtn) {
       bunnyCloseBtn.addEventListener('click', closeBunnyCelebration);
