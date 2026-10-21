@@ -800,7 +800,6 @@
     renderApp();
     await prepareAndBindIntro();
     startBirthdayIntroAnimation(forcePlayIntro);
-    checkUncelebratedGiftsOnLoad();
   }
 
   function setupRealtimeForCurrentCampaign(campaignId) {
@@ -1732,17 +1731,29 @@
   // 4. METRICS & RENDERING FOR CURRENT CAMPAIGN
   // =========================================================================
   function getGiftMetrics(gift) {
-    const allForGift = state.contributions.filter((c) => c.giftId === gift.id);
-    const approvedPledges = allForGift.filter((c) => c.status === 'approved');
-    const pendingPledges = allForGift.filter((c) => c.status !== 'approved');
+    if (!gift) {
+      return { raised: 0, pendingAmount: 0, goal: 1, rawPercent: 0, clampedPercent: 0, remaining: 1, approvedCount: 0, pendingCount: 0, isCompleted: false };
+    }
+    const targetGiftId = String(gift.id || '').trim();
 
-    const raised = approvedPledges.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
-    const pendingAmount = pendingPledges.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
-    const goal = Math.max(1, Number(gift.goalAmount) || 1);
+    // 1 & 4. Strictly filter contributions for THIS individual gift only
+    const allForGift = (state.contributions || []).filter((c) => String(c.giftId || '').trim() === targetGiftId);
+
+    // 5. Exclude unapproved contributions: only status === 'approved' counts toward raised amount
+    const approvedPledges = allForGift.filter((c) => String(c.status || '').trim() === 'approved');
+    const pendingPledges = allForGift.filter((c) => String(c.status || '').trim() !== 'approved');
+
+    const raised = approvedPledges.reduce((sum, c) => sum + Math.max(0, Number(c.amount) || 0), 0);
+    const pendingAmount = pendingPledges.reduce((sum, c) => sum + Math.max(0, Number(c.amount) || 0), 0);
+    const goal = Math.max(1, Math.round(Number(gift.goalAmount) || 1));
+
+    // 6. Displayed percentage and completion criteria use the EXACT same calculation
     const rawPercent = Math.round((raised / goal) * 100);
     const clampedPercent = Math.min(100, rawPercent);
     const remaining = Math.max(0, goal - raised);
-    const isCompleted = raised >= goal;
+
+    // 2. Completed when approved raised >= goal OR rawPercent >= 100
+    const isCompleted = (raised >= goal) || (rawPercent >= 100);
 
     return {
       raised,
@@ -2014,10 +2025,18 @@
         const pLabel = priorityLabels[gift.priority] || '위시 선물';
 
         let statusBadge = '';
+        let replayActionHtml = '';
         if (metrics.isCompleted) {
           statusBadge = `
-            <span class="status-pill completed">100% 달성 완료</span>
-            <button type="button" class="btn-replay-celebration" data-action="replay-gift-celebration" data-gift-id="${escapeHtml(gift.id)}" title="100% 달성 축하 애니메이션 다시보기">🐰 축하 다시보기</button>
+            <div class="gift-badges-right">
+              <span class="status-pill completed">100% 달성 완료</span>
+              <button type="button" class="btn-replay-celebration" data-action="replay-gift-celebration" data-gift-id="${escapeHtml(gift.id)}" title="100% 달성 축하 애니메이션 다시보기">🐰 축하 다시보기</button>
+            </div>
+          `;
+          replayActionHtml = `
+            <button type="button" class="btn-replay-celebration-action" data-action="replay-gift-celebration" data-gift-id="${escapeHtml(gift.id)}" title="100% 달성 축하 애니메이션 다시보기">
+              <span>🐰 100% 달성 축하 애니메이션 다시보기</span>
+            </button>
           `;
         } else if (metrics.pendingCount > 0) {
           statusBadge = `<span class="status-pill in-progress">승인 ${metrics.approvedCount} · 대기 ${metrics.pendingCount}</span>`;
@@ -2099,6 +2118,7 @@
 
               <div class="gift-card-footer">
                 ${productLinkHtml}
+                ${replayActionHtml}
                 <button type="button" class="btn-pledge-card" data-action="open-pledge" data-gift-id="${escapeHtml(gift.id)}">
                   ${ctaLabel}
                 </button>
@@ -3747,6 +3767,7 @@
         const ctx = canvas.getContext('2d');
         if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
+      checkUncelebratedGiftsOnLoad();
     }, 660);
     introTimers.push(cleanupTid);
   }
@@ -3779,6 +3800,7 @@
         docEl.classList.remove('intro-active', 'intro-fading-out');
         docEl.classList.add('intro-skipped');
         overlay.hidden = true;
+        setTimeout(() => checkUncelebratedGiftsOnLoad(), 500);
         return;
       }
     }
@@ -4605,7 +4627,7 @@
           showToast('선물이 삭제되었습니다.');
         }
       } else if (action === 'replay-gift-celebration') {
-        const targetGift = state.gifts.find((g) => g.id === giftId);
+        const targetGift = state.gifts.find((g) => String(g.id || '').trim() === String(giftId || '').trim());
         if (targetGift) {
           playBunnyCelebration(targetGift);
         }
@@ -4645,7 +4667,7 @@
 
       if (action === 'approve-pledge') {
         if (!requireAdminPermission('입금 확인 승인')) return;
-        const targetGiftBefore = state.gifts.find((g) => g.id === target.giftId);
+        const targetGiftBefore = state.gifts.find((g) => String(g.id || '').trim() === String(target.giftId || '').trim());
         const wasCompletedBefore = targetGiftBefore ? getGiftMetrics(targetGiftBefore).isCompleted : false;
 
         if (isCloudConnected && supabaseClient) {
@@ -4667,7 +4689,7 @@
           renderApp();
         }
 
-        const targetGiftAfter = state.gifts.find((g) => g.id === target.giftId) || targetGiftBefore;
+        const targetGiftAfter = state.gifts.find((g) => String(g.id || '').trim() === String(target.giftId || '').trim()) || targetGiftBefore;
         const isCompletedNow = targetGiftAfter ? getGiftMetrics(targetGiftAfter).isCompleted : false;
 
         if (!wasCompletedBefore && isCompletedNow) {
