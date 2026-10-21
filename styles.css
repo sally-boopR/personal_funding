@@ -3937,6 +3937,9 @@ body:not(.is-admin-mode) .admin-only-ui {
   align-items: center;
   width: min(360px, 92vw);
   max-width: 100%;
+}
+
+.bunny-celebration-dialog.is-animating {
   animation: bunnyBounceIn 0.58s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
@@ -4079,40 +4082,61 @@ body:not(.is-admin-mode) .admin-only-ui {
 .sparkle-particle.p7 { left: 60px; bottom: 70px; font-size: 1.2rem; color: #C98691; animation-delay: 0.35s; }
 .sparkle-particle.p8 { right: 50px; bottom: 75px; font-size: 1.1rem; color: #F48CA0; animation-delay: 0.58s; }
 
-/* Alternating Drumming Animations */
+/* Ensure all animated SVG groups use viewBox coordinate system */
+.bunny-svg-wrapper svg * {
+  transform-box: view-box;
+}
+
+/* Happy Eyes & Mouth are hidden by default, only shown in Triumph victory state */
+.bunny-eyes-happy,
+.bunny-mouth-happy {
+  display: none !important;
+}
+
+/* Alternating Drumming Animations (Left & Right Arms) */
 .bunny-arm-left {
+  transform-box: view-box;
   transform-origin: 104px 170px;
-  animation: bunnyDrumLeft 0.22s ease-in-out infinite alternate;
+  animation: bunnyDrumLeft 0.32s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 .bunny-arm-right {
+  transform-box: view-box;
   transform-origin: 216px 170px;
-  animation: bunnyDrumRight 0.22s ease-in-out infinite alternate;
-  animation-delay: -0.11s;
+  animation: bunnyDrumRight 0.32s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 .bunny-main-body {
+  transform-box: view-box;
   transform-origin: 160px 270px;
-  animation: bunnyBodyBounce 0.22s ease-in-out infinite alternate;
+  animation: bunnyBodyBounce 0.16s ease-in-out infinite alternate;
 }
 
 .bunny-ear-left {
+  transform-box: view-box;
   transform-origin: 122px 88px;
-  animation: bunnyEarSwayL 0.44s ease-in-out infinite alternate;
+  animation: bunnyEarSwayL 0.32s ease-in-out infinite alternate;
 }
 
 .bunny-ear-right {
+  transform-box: view-box;
   transform-origin: 186px 88px;
-  animation: bunnyEarSwayR 0.44s ease-in-out infinite alternate;
+  animation: bunnyEarSwayR 0.32s ease-in-out infinite alternate;
+}
+
+.drum-surface {
+  transform-box: view-box;
+  transform-origin: 160px 240px;
+  animation: drumVibrate 0.16s ease-in-out infinite alternate;
 }
 
 /* Triumph State (Victory pose at the end of celebration) */
 .bunny-celebration-dialog.is-triumph .bunny-arm-left {
-  animation: bunnyArmTriumphL 0.36s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, bunnyArmWaveL 0.38s ease-in-out 0.36s infinite alternate !important;
+  animation: bunnyArmTriumphL 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, bunnyArmWaveL 0.35s ease-in-out 0.35s infinite alternate !important;
 }
 
 .bunny-celebration-dialog.is-triumph .bunny-arm-right {
-  animation: bunnyArmTriumphR 0.36s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, bunnyArmWaveR 0.38s ease-in-out 0.36s infinite alternate !important;
+  animation: bunnyArmTriumphR 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, bunnyArmWaveR 0.35s ease-in-out 0.35s infinite alternate !important;
 }
 
 .bunny-celebration-dialog.is-triumph .bunny-eyes-normal,
@@ -4148,49 +4172,63 @@ body:not(.is-admin-mode) .admin-only-ui {
   100% { transform: translateY(0) scale(1); opacity: 1; }
 }
 
+/* Alternating Drumming Beats */
 @keyframes bunnyDrumLeft {
-  0% { transform: rotate(-6deg); }
-  100% { transform: rotate(18deg); }
+  0%, 100% {
+    transform: rotate(-18deg);
+  }
+  48%, 52% {
+    transform: rotate(14deg);
+  }
 }
 
 @keyframes bunnyDrumRight {
-  0% { transform: rotate(6deg); }
-  100% { transform: rotate(-18deg); }
+  0%, 100% {
+    transform: rotate(14deg);
+  }
+  48%, 52% {
+    transform: rotate(-18deg);
+  }
 }
 
 @keyframes bunnyBodyBounce {
   0% { transform: translateY(0) scale(1, 1); }
-  100% { transform: translateY(2.8px) scale(1.018, 0.982); }
+  100% { transform: translateY(3.5px) scale(1.025, 0.975); }
+}
+
+@keyframes drumVibrate {
+  0% { transform: scale(1, 1); }
+  100% { transform: scale(1.03, 0.97); }
 }
 
 @keyframes bunnyEarSwayL {
-  0% { transform: rotate(-4deg); }
-  100% { transform: rotate(4deg); }
+  0% { transform: rotate(-7deg); }
+  100% { transform: rotate(7deg); }
 }
 
 @keyframes bunnyEarSwayR {
-  0% { transform: rotate(4deg); }
-  100% { transform: rotate(-4deg); }
+  0% { transform: rotate(7deg); }
+  100% { transform: rotate(-7deg); }
 }
 
 @keyframes bunnyArmTriumphL {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(-76deg); }
+  0% { transform: rotate(-18deg); }
+  100% { transform: rotate(-80deg); }
 }
 
 @keyframes bunnyArmTriumphR {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(76deg); }
+  0% { transform: rotate(14deg); }
+  100% { transform: rotate(80deg); }
 }
 
 @keyframes bunnyArmWaveL {
-  0% { transform: rotate(-76deg); }
-  100% { transform: rotate(-86deg); }
+  0% { transform: rotate(-80deg); }
+  100% { transform: rotate(-92deg); }
 }
 
 @keyframes bunnyArmWaveR {
-  0% { transform: rotate(76deg); }
-  100% { transform: rotate(86deg); }
+  0% { transform: rotate(80deg); }
+  100% { transform: rotate(92deg); }
 }
 
 @keyframes floatSparkle {
@@ -4274,5 +4312,269 @@ body:not(.is-admin-mode) .admin-only-ui {
 
 .btn-replay-celebration-action:active {
   transform: translateY(0);
+}
+
+/* ==========================================================================
+   5. TOP HEADER GUIDE PILL BUTTON
+   ========================================================================== */
+.btn-guide-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 13px;
+  border-radius: var(--radius-pill);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #C25672;
+  background: #FFF2F5;
+  border: 1px solid #FFD3DF;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(194, 86, 114, 0.08);
+}
+
+.btn-guide-pill:hover {
+  background: #FFE4EC;
+  color: #AA415D;
+  border-color: #FFB8CB;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(194, 86, 114, 0.18);
+}
+
+.btn-guide-pill:active {
+  transform: translateY(0);
+}
+
+/* ==========================================================================
+   6. FIRST-VISIT USER GUIDE MODAL (Pastel & Indie Pink Mood)
+   ========================================================================== */
+.guide-modal-backdrop {
+  z-index: 10040;
+}
+
+.guide-modal-dialog {
+  position: relative;
+  max-width: 460px;
+  width: min(460px, calc(100vw - 32px));
+  max-height: min(640px, calc(100vh - 48px));
+  padding: 28px 24px 22px;
+  border-radius: 24px;
+  background: #FFFDFD;
+  border: 1.5px solid #FFE4EB;
+  box-shadow: 0 20px 48px rgba(194, 86, 114, 0.22), 0 4px 16px rgba(0, 0, 0, 0.04);
+  animation: guideModalBounceIn 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+@keyframes guideModalBounceIn {
+  0% {
+    transform: scale(0.88) translateY(24px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.guide-modal-header {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.guide-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #C25672;
+  background: #FFF0F4;
+  border: 1px solid #FFD3DF;
+  margin-bottom: 8px;
+}
+
+.guide-modal-title {
+  font-size: 1.32rem;
+  font-weight: 800;
+  color: var(--text-primary, #3E2F32);
+  margin: 0 0 6px;
+  letter-spacing: -0.02em;
+}
+
+.guide-modal-desc {
+  font-size: 0.86rem;
+  color: var(--text-muted, #856E74);
+  margin: 0;
+}
+
+.guide-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.guide-step-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 11px 13px;
+  border-radius: 16px;
+  background: #FFF8F9;
+  border: 1px solid #FFE6EC;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.guide-step-card:hover {
+  background: #FFF3F5;
+  transform: translateY(-1px);
+}
+
+.guide-step-num {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FF9EB5 0%, #E8728F 100%);
+  color: #FFFFFF;
+  font-size: 0.8rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(232, 114, 143, 0.35);
+  margin-top: 1px;
+}
+
+.guide-step-content {
+  flex: 1;
+}
+
+.guide-step-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #4A3338;
+  margin: 0 0 3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.guide-step-desc {
+  font-size: 0.82rem;
+  color: #6C545A;
+  margin: 0;
+  line-height: 1.45;
+  word-break: keep-all;
+}
+
+.guide-notice-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #FDF9F2;
+  border: 1px dashed #F2DCB3;
+  margin-bottom: 18px;
+}
+
+.guide-notice-icon {
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+.guide-notice-body {
+  font-size: 0.79rem;
+  color: #7A6348;
+  line-height: 1.5;
+}
+
+.guide-notice-item {
+  position: relative;
+  padding-left: 10px;
+}
+
+.guide-notice-item::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: #C49B55;
+  font-weight: bold;
+}
+
+.guide-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.guide-dont-show-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.84rem;
+  color: #856E74;
+  cursor: pointer;
+  user-select: none;
+}
+
+.guide-dont-show-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--pink-main, #E8728F);
+  cursor: pointer;
+  margin: 0;
+}
+
+.guide-start-btn {
+  padding: 10px 24px;
+  border-radius: 9999px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #FF8CA7 0%, #E8728F 100%);
+  color: #FFFFFF;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(232, 114, 143, 0.35);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.guide-start-btn:hover {
+  transform: translateY(-1.5px) scale(1.02);
+  box-shadow: 0 6px 18px rgba(232, 114, 143, 0.45);
+}
+
+.guide-start-btn:active {
+  transform: translateY(0) scale(1);
+}
+
+@media (max-width: 480px) {
+  .guide-modal-dialog {
+    padding: 22px 18px 18px;
+    border-radius: 20px;
+  }
+  .guide-modal-title {
+    font-size: 1.18rem;
+  }
+  .guide-modal-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .guide-start-btn {
+    width: 100%;
+    text-align: center;
+  }
+  .guide-dont-show-label {
+    justify-content: center;
+  }
 }
 

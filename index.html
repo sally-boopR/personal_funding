@@ -326,6 +326,11 @@
           + 선물 추가
         </button>
 
+        <!-- First-Visit / Reusable Guide Button -->
+        <button type="button" class="btn-guide-pill" id="topGuideBtn" title="이용 방법 안내">
+          💡 이용 방법
+        </button>
+
         <!-- Go to Create My Own Funding Button -->
         <button type="button" class="btn-primary btn-sm funding-only-ui" id="topCreateNewFundingBtn" hidden>
           ✨ 나도 펀딩 만들기
@@ -341,11 +346,14 @@
           </button>
           <div class="dropdown-menu" id="dataDropdownMenu" hidden>
             <div class="dropdown-header">방문자 &amp; 펀딩 주인 메뉴</div>
+            <button type="button" class="dropdown-item" id="dropdownGuideBtn">
+              💡 펀딩 이용 방법 안내
+            </button>
             <button type="button" class="dropdown-item" id="dropdownShareFundingBtn">
               🔗 이 펀딩 공유 URL 복사
             </button>
             <button type="button" class="dropdown-item" id="dropdownAdminAuthBtn">
-              🔐 펀딩 주인 비밀번호 인증 / DB 설정
+              🔐 펀딩 주인 비밀번호 인증
             </button>
             <button type="button" class="dropdown-item" id="replayIntroBtn">
               🎆 생일 축하 인트로 다시 보기
@@ -408,11 +416,14 @@
         </div>
 
         <div class="mobile-drawer-actions">
+          <button type="button" class="btn-secondary mobile-action-btn" id="mobileGuideBtn">
+            💡 펀딩 이용 방법 안내
+          </button>
           <button type="button" class="btn-secondary mobile-action-btn funding-only-ui" id="mobileShareUrlBtn" hidden>
             🔗 이 펀딩 공유 URL 복사
           </button>
           <button type="button" class="btn-secondary mobile-action-btn" id="mobileAdminAuthBtn">
-            🔐 펀딩 주인 로그인 / Supabase DB 설정
+            🔐 펀딩 주인 비밀번호 인증
           </button>
           <button type="button" class="btn-primary mobile-action-btn admin-only-ui" id="mobileAddGiftBtn" hidden>
             + 새 위시리스트 선물 추가 (주인)
@@ -972,6 +983,9 @@
         </p>
       </div>
       <div class="footer-right" style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button type="button" class="btn-ghost-sm" id="footerGuideBtn">
+          💡 이용 방법 안내
+        </button>
         <button type="button" class="btn-ghost-sm" id="footerGoCreateBtn">
           ✨ 나만의 펀딩 만들기
         </button>
@@ -1789,11 +1803,85 @@
   </div>
 
   <!-- =====================================================================
-       MODAL 5: FUNDING OWNER PASSWORD LOGIN & DEV SUPABASE DB CONNECTION
+       FIRST VISIT USER GUIDE MODAL (마음을 모아 선물해요! ♡)
+       ===================================================================== -->
+  <div class="modal-backdrop guide-modal-backdrop" id="userGuideModalBackdrop" hidden aria-hidden="true">
+    <div class="modal-dialog guide-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="userGuideModalTitle">
+      <button type="button" class="modal-close-btn" id="closeUserGuideModalBtn" aria-label="안내 닫기">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+
+      <div class="guide-modal-header">
+        <div class="guide-badge-pill">🌸 이용 방법 안내</div>
+        <h3 class="guide-modal-title" id="userGuideModalTitle">마음을 모아 선물해요! ♡</h3>
+        <p class="guide-modal-desc">친구들과 함께하는 따뜻한 생일 펀딩, 이렇게 이용해요!</p>
+      </div>
+
+      <div class="guide-steps-list">
+        <div class="guide-step-card">
+          <div class="guide-step-num">1</div>
+          <div class="guide-step-content">
+            <h4 class="guide-step-title">펀딩 만들기</h4>
+            <p class="guide-step-desc">이름과 관리자 비밀번호를 설정하고 원하는 선물을 등록해요.</p>
+          </div>
+        </div>
+
+        <div class="guide-step-card">
+          <div class="guide-step-num">2</div>
+          <div class="guide-step-content">
+            <h4 class="guide-step-title">친구들에게 공유하기</h4>
+            <p class="guide-step-desc">펀딩 링크를 복사해 친구들에게 보내요.</p>
+          </div>
+        </div>
+
+        <div class="guide-step-card">
+          <div class="guide-step-num">3</div>
+          <div class="guide-step-content">
+            <h4 class="guide-step-title">송금하고 후원 신청하기</h4>
+            <p class="guide-step-desc">안내된 계좌로 직접 송금하고 후원 내역을 남겨요.</p>
+          </div>
+        </div>
+
+        <div class="guide-step-card">
+          <div class="guide-step-num">4</div>
+          <div class="guide-step-content">
+            <h4 class="guide-step-title">입금 확인 후 달성률 반영</h4>
+            <p class="guide-step-desc">관리자가 입금을 확인하면 모금액에 반영돼요.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Additional Notices Box -->
+      <div class="guide-notice-box">
+        <div class="guide-notice-icon">💡</div>
+        <div class="guide-notice-body">
+          <div class="guide-notice-item">사이트에서 자동 결제되는 방식이 아니에요.</div>
+          <div class="guide-notice-item">송금 전 은행 앱에서 예금주가 맞는지 꼭 확인해 주세요.</div>
+        </div>
+      </div>
+
+      <!-- Modal Footer with "Do not show again" and "Start" button -->
+      <div class="guide-modal-footer">
+        <label class="guide-dont-show-label" for="guideDontShowCheckbox">
+          <input type="checkbox" id="guideDontShowCheckbox" class="guide-checkbox" />
+          <span>다시 보지 않기</span>
+        </label>
+        <button type="button" class="btn-primary guide-start-btn" id="guideStartBtn">
+          시작하기 ♡
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL 5: FUNDING OWNER PASSWORD LOGIN
        (이메일/회원가입 없이 관리 비밀번호로만 인증 · 비밀번호 복구 기능 없음)
        ===================================================================== -->
   <div class="modal-backdrop" id="adminAuthModalBackdrop" hidden aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="dialog" aria-modal="true" aria-labelledby="adminAuthModalTitle">
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="adminAuthModalTitle">
       <button type="button" class="modal-close-btn" id="closeAdminAuthModalBtn" aria-label="모달 닫기">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
           <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1802,8 +1890,8 @@
       </button>
 
       <div class="modal-header">
-        <span class="modal-eyebrow">FUNDING OWNER &amp; CLOUD DB</span>
-        <h3 class="modal-title" id="adminAuthModalTitle">펀딩 주인 비밀번호 인증 &amp; DB 연결</h3>
+        <span class="modal-eyebrow">FUNDING OWNER AUTH</span>
+        <h3 class="modal-title" id="adminAuthModalTitle">펀딩 주인 비밀번호 인증</h3>
         <p class="modal-subtitle">
           각 펀딩은 생성 시 설정한 <strong>관리 비밀번호</strong>로 안전하게 격리되며, 서버 측에서 해시 검증 후 관리 세션이 부여됩니다.
         </p>
@@ -1812,7 +1900,7 @@
       <!-- 1. Funding Owner Password Login Section (Shown when viewing a funding) -->
       <div class="toss-admin-config-box" id="ownerAuthSectionBox">
         <div class="remit-config-section-title">
-          🔐 1. 현재 펀딩 주인 인증 (<span id="authModalFundingLabel">현재 펀딩</span>)
+          🔐 현재 펀딩 주인 인증 (<span id="authModalFundingLabel">현재 펀딩</span>)
         </div>
 
         <!-- Logged Out View -->
@@ -1869,8 +1957,8 @@
         </div>
       </div>
 
-      <!-- 2. Dev Supabase Project Connection Config Section -->
-      <div class="supabase-config-box">
+      <!-- 2. Dev Supabase Project Connection Config Section (Hidden: Default personal_funding Supabase project is used) -->
+      <div class="supabase-config-box" style="display: none !important;" hidden aria-hidden="true">
         <div class="remit-config-section-title">☁️ 2. personal_funding Supabase 데이터베이스 &amp; Storage (<code>gift-image</code>) 연결</div>
         <p class="toss-admin-help" style="margin-bottom: 10px;">
           기존 소현이 웹사이트 운영 DB와 완전히 분리된 <strong>personal_funding Supabase 프로젝트</strong>의 URL과 Anon(Publishable) Key를 연결하세요. (※ 절대 <code>service_role</code> 비밀키를 넣지 마세요!)

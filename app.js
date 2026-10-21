@@ -774,6 +774,7 @@
       finishBirthdayIntro();
       updateViewModeUI();
       renderRecentFundingsList();
+      checkFirstVisitGuideOnLoad();
       return;
     }
 
@@ -3486,23 +3487,31 @@
   }
 
   // =========================================================================
-  // 9. MODAL 5: FUNDING OWNER PASSWORD LOGIN & DEV SUPABASE DB CONNECTION
+  // 9. MODAL 5: FUNDING OWNER PASSWORD LOGIN
   // =========================================================================
   function openAdminAuthModal() {
     const cfg = resolveSupabaseConnectionConfig();
-    document.getElementById('quickSupabaseUrlInput').value = cfg.url || '';
-    document.getElementById('quickSupabaseAnonKeyInput').value = cfg.anonKey || '';
-    document.getElementById('quickSupabaseBucketInput').value = cfg.bucket || DEFAULT_BUCKET_NAME;
+    const urlInput = document.getElementById('quickSupabaseUrlInput');
+    if (urlInput) urlInput.value = cfg.url || '';
+    const keyInput = document.getElementById('quickSupabaseAnonKeyInput');
+    if (keyInput) keyInput.value = cfg.anonKey || '';
+    const bucketInput = document.getElementById('quickSupabaseBucketInput');
+    if (bucketInput) bucketInput.value = cfg.bucket || DEFAULT_BUCKET_NAME;
 
-    document.getElementById('adminAuthErrorMsg').hidden = true;
-    document.getElementById('supabaseConnectErrorMsg').hidden = true;
-    document.getElementById('adminPasswordInput').value = '';
+    const authErr = document.getElementById('adminAuthErrorMsg');
+    if (authErr) authErr.hidden = true;
+    const sbErr = document.getElementById('supabaseConnectErrorMsg');
+    if (sbErr) sbErr.hidden = true;
+    const pwdInput = document.getElementById('adminPasswordInput');
+    if (pwdInput) pwdInput.value = '';
 
     updateAdminModeUI();
 
     const backdrop = document.getElementById('adminAuthModalBackdrop');
-    backdrop.hidden = false;
-    backdrop.setAttribute('aria-hidden', 'false');
+    if (backdrop) {
+      backdrop.hidden = false;
+      backdrop.setAttribute('aria-hidden', 'false');
+    }
   }
 
   function closeAdminAuthModal() {
@@ -3718,14 +3727,23 @@
   }
 
   // =========================================================================
-  // 10. FULLSCREEN BIRTHDAY CELEBRATION INTRO ENGINE
+  // 10. FULLSCREEN BIRTHDAY CELEBRATION INTRO ENGINE & COORDINATOR
   // =========================================================================
   let introAnimFrameId = null;
   let introTimers = [];
   let introFinished = false;
+  let isIntroRunning = false;
+  let pendingCelebrationGift = null;
+  let celebrationTimer = null;
 
   function getIntroSeenKey() {
     return `bday_intro_seen_v2_${currentCampaignId || 'home'}`;
+  }
+
+  function isIntroActive() {
+    const overlay = document.getElementById('birthdayIntroOverlay');
+    const docEl = document.documentElement;
+    return isIntroRunning || Boolean(overlay && !overlay.hidden && docEl.classList.contains('intro-active'));
   }
 
   function clearIntroTimersAndLoop() {
@@ -3767,7 +3785,29 @@
         const ctx = canvas.getContext('2d');
         if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
-      checkUncelebratedGiftsOnLoad();
+      isIntroRunning = false;
+
+      // ② 인트로 오버레이가 완전히 사라지고 종료 처리까지 완료
+      // ③ 약 1초간 아무 축하 오버레이도 없이 대기
+      clearTimeout(celebrationTimer);
+      celebrationTimer = setTimeout(() => {
+        // 인트로 재생 중 다시보기 요청이 있었다면 먼저 재생
+        if (pendingCelebrationGift) {
+          const g = pendingCelebrationGift;
+          pendingCelebrationGift = null;
+          playBunnyCelebration(g);
+          return;
+        }
+
+        // ④ 미확인 100% 달성 선물 확인 후 토끼 축하 실행
+        const completedUnseen = findUncelebratedCompletedGift();
+        if (completedUnseen) {
+          markGiftCelebrated(currentCampaignId, completedUnseen.id);
+          playBunnyCelebration(completedUnseen);
+        } else {
+          checkFirstVisitGuideOnLoad();
+        }
+      }, 1000);
     }, 660);
     introTimers.push(cleanupTid);
   }
@@ -3800,13 +3840,35 @@
         docEl.classList.remove('intro-active', 'intro-fading-out');
         docEl.classList.add('intro-skipped');
         overlay.hidden = true;
-        setTimeout(() => checkUncelebratedGiftsOnLoad(), 500);
+        isIntroRunning = false;
+        introFinished = true;
+
+        clearTimeout(celebrationTimer);
+        celebrationTimer = setTimeout(() => {
+          if (pendingCelebrationGift) {
+            const g = pendingCelebrationGift;
+            pendingCelebrationGift = null;
+            playBunnyCelebration(g);
+            return;
+          }
+          const completedUnseen = findUncelebratedCompletedGift();
+          if (completedUnseen) {
+            markGiftCelebrated(currentCampaignId, completedUnseen.id);
+            playBunnyCelebration(completedUnseen);
+          } else {
+            checkFirstVisitGuideOnLoad();
+          }
+        }, 800);
         return;
       }
     }
 
+    // Full Intro Start: Close any running celebration and reset coordinator flags
+    closeBunnyCelebration();
     clearIntroTimersAndLoop();
+    clearTimeout(celebrationTimer);
     introFinished = false;
+    isIntroRunning = true;
     overlay.hidden = false;
     docEl.classList.remove('intro-skipped', 'intro-fading-out');
     docEl.classList.add('intro-active');
@@ -4225,13 +4287,21 @@
     } catch (e) {}
   }
 
+  function findUncelebratedCompletedGift() {
+    if (!currentCampaignId || !Array.isArray(state.gifts)) return null;
+    return state.gifts.find((g) => {
+      const m = getGiftMetrics(g);
+      return m.isCompleted && !hasGiftBeenCelebrated(currentCampaignId, g.id);
+    }) || null;
+  }
+
   function closeBunnyCelebration() {
     clearTimeout(bunnyCelebrationTimer1);
     clearTimeout(bunnyCelebrationTimer2);
     clearTimeout(bunnyCelebrationTimer3);
     const overlay = document.getElementById('bunnyCelebrationOverlay');
     const dialog = document.getElementById('bunnyCelebrationDialog');
-    if (dialog) dialog.classList.remove('is-triumph', 'is-fading-out');
+    if (dialog) dialog.classList.remove('is-animating', 'is-triumph', 'is-fading-out');
     if (overlay) {
       overlay.hidden = true;
       overlay.setAttribute('aria-hidden', 'true');
@@ -4255,9 +4325,14 @@
       giftEl.textContent = `「${gift.title || '위시 선물'}」 100% 달성 축하 🎉`;
     }
 
-    dialog.classList.remove('is-triumph', 'is-fading-out');
+    // Force CSS reflow so animation restarts cleanly from frame 0 every time
+    dialog.classList.remove('is-animating', 'is-triumph', 'is-fading-out');
     overlay.hidden = false;
     overlay.setAttribute('aria-hidden', 'false');
+
+    void dialog.offsetWidth;
+
+    dialog.classList.add('is-animating');
 
     // 2.3s: Triumph victory pose (arms raised with drumsticks, laughing eyes, happy smile, confetti!)
     bunnyCelebrationTimer1 = setTimeout(() => {
@@ -4273,21 +4348,85 @@
     // 4.0s: Clean up and hide
     bunnyCelebrationTimer3 = setTimeout(() => {
       closeBunnyCelebration();
+      // After celebration finishes, check if first-visit user guide modal needs to be shown
+      if (!isUserGuideDismissed() && !isIntroActive()) {
+        setTimeout(() => {
+          if (!isIntroActive()) openUserGuideModal();
+        }, 400);
+      }
     }, 4000);
   }
 
   function checkUncelebratedGiftsOnLoad() {
     if (!currentCampaignId || !Array.isArray(state.gifts)) return;
-    const completedUnseen = state.gifts.find((g) => {
-      const m = getGiftMetrics(g);
-      return m.isCompleted && !hasGiftBeenCelebrated(currentCampaignId, g.id);
-    });
+    if (isIntroActive()) return;
+    const completedUnseen = findUncelebratedCompletedGift();
     if (completedUnseen) {
-      setTimeout(() => {
-        markGiftCelebrated(currentCampaignId, completedUnseen.id);
-        playBunnyCelebration(completedUnseen);
-      }, 900);
+      markGiftCelebrated(currentCampaignId, completedUnseen.id);
+      playBunnyCelebration(completedUnseen);
     }
+  }
+
+  // =========================================================================
+  // 11. FIRST-VISIT USER GUIDE MODAL (마음을 모아 선물해요! ♡)
+  // =========================================================================
+  const USER_GUIDE_DISMISSED_KEY = 'pf_user_guide_dismissed_v1';
+
+  function isUserGuideDismissed() {
+    try {
+      return localStorage.getItem(USER_GUIDE_DISMISSED_KEY) === '1';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function setUserGuideDismissed(dismissed) {
+    try {
+      if (dismissed) {
+        localStorage.setItem(USER_GUIDE_DISMISSED_KEY, '1');
+      } else {
+        localStorage.removeItem(USER_GUIDE_DISMISSED_KEY);
+      }
+    } catch (e) {}
+  }
+
+  function openUserGuideModal() {
+    const backdrop = document.getElementById('userGuideModalBackdrop');
+    const checkbox = document.getElementById('guideDontShowCheckbox');
+    if (!backdrop) return;
+    if (checkbox) {
+      checkbox.checked = isUserGuideDismissed();
+    }
+    backdrop.hidden = false;
+    backdrop.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeUserGuideModal() {
+    const backdrop = document.getElementById('userGuideModalBackdrop');
+    const checkbox = document.getElementById('guideDontShowCheckbox');
+    if (checkbox && checkbox.checked) {
+      setUserGuideDismissed(true);
+    } else {
+      setUserGuideDismissed(false);
+    }
+    if (backdrop) {
+      backdrop.hidden = true;
+      backdrop.setAttribute('aria-hidden', 'true');
+    }
+    // After guide is closed, check for any uncelebrated completed gifts
+    setTimeout(() => {
+      checkUncelebratedGiftsOnLoad();
+    }, 350);
+  }
+
+  function checkFirstVisitGuideOnLoad() {
+    if (isUserGuideDismissed()) {
+      checkUncelebratedGiftsOnLoad();
+      return;
+    }
+    setTimeout(() => {
+      openUserGuideModal();
+    }, 450);
   }
 
   function closeMobileDrawer() {
@@ -4337,6 +4476,29 @@
         });
       }
     });
+
+    // First-Visit & Manual Guide Buttons
+    const guideTriggers = ['topGuideBtn', 'dropdownGuideBtn', 'mobileGuideBtn', 'footerGuideBtn'];
+    guideTriggers.forEach((btnId) => {
+      const el = document.getElementById(btnId);
+      if (el) {
+        el.addEventListener('click', () => {
+          const menu = document.getElementById('dataDropdownMenu');
+          if (menu) menu.hidden = true;
+          closeMobileDrawer();
+          openUserGuideModal();
+        });
+      }
+    });
+
+    const closeGuideBtn = document.getElementById('closeUserGuideModalBtn');
+    if (closeGuideBtn) {
+      closeGuideBtn.addEventListener('click', closeUserGuideModal);
+    }
+    const guideStartBtn = document.getElementById('guideStartBtn');
+    if (guideStartBtn) {
+      guideStartBtn.addEventListener('click', closeUserGuideModal);
+    }
 
     // Share Current Funding URL Buttons
     const shareTriggers = [
@@ -4629,6 +4791,11 @@
       } else if (action === 'replay-gift-celebration') {
         const targetGift = state.gifts.find((g) => String(g.id || '').trim() === String(giftId || '').trim());
         if (targetGift) {
+          if (isIntroActive()) {
+            pendingCelebrationGift = targetGift;
+            showToast('인트로가 끝난 후 축하 애니메이션이 재생됩니다 🐰');
+            return;
+          }
           playBunnyCelebration(targetGift);
         }
       }
@@ -5118,6 +5285,7 @@
     const replayIntroBtn = document.getElementById('replayIntroBtn');
     if (replayIntroBtn) {
       replayIntroBtn.addEventListener('click', async () => {
+        closeBunnyCelebration();
         document.getElementById('dataDropdownMenu').hidden = true;
         await prepareAndBindIntro();
         startBirthdayIntroAnimation(true);
@@ -5127,6 +5295,7 @@
     const mobileReplayIntroBtn = document.getElementById('mobileReplayIntroBtn');
     if (mobileReplayIntroBtn) {
       mobileReplayIntroBtn.addEventListener('click', async () => {
+        closeBunnyCelebration();
         closeMobileDrawer();
         await prepareAndBindIntro();
         startBirthdayIntroAnimation(true);
@@ -5146,8 +5315,12 @@
     document.querySelectorAll('.modal-backdrop').forEach((backdrop) => {
       backdrop.addEventListener('click', (e) => {
         if (e.target === backdrop) {
-          backdrop.hidden = true;
-          backdrop.setAttribute('aria-hidden', 'true');
+          if (backdrop.id === 'userGuideModalBackdrop') {
+            closeUserGuideModal();
+          } else {
+            backdrop.hidden = true;
+            backdrop.setAttribute('aria-hidden', 'true');
+          }
         }
       });
     });
@@ -5158,6 +5331,7 @@
           finishBirthdayIntro();
         }
         closeBunnyCelebration();
+        closeUserGuideModal();
         closePledgeModal();
         closeAvatarManageModal();
         closeGiftModal();
