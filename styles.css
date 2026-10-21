@@ -612,6 +612,13 @@ html.intro-fading-out .birthday-intro-overlay {
   max-width: 1160px;
   margin: 0 auto;
   padding: 0 16px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 360px) {
+  .container {
+    padding: 0 12px;
+  }
 }
 
 @media (min-width: 768px) {
@@ -2552,6 +2559,13 @@ html.intro-fading-out .birthday-intro-overlay {
   justify-content: center;
   padding: 12px;
   overflow-y: auto;
+  box-sizing: border-box;
+}
+
+@media (max-width: 360px) {
+  .modal-backdrop {
+    padding: 8px 6px;
+  }
 }
 
 .modal-backdrop[hidden] {
@@ -2570,6 +2584,13 @@ html.intro-fading-out .birthday-intro-overlay {
   padding: 22px 18px;
   position: relative;
   animation: modalSlideUp 0.24s var(--ease-out);
+  box-sizing: border-box;
+}
+
+@media (max-width: 360px) {
+  .modal-dialog {
+    padding: 18px 12px;
+  }
 }
 
 @media (min-width: 640px) {
@@ -3425,10 +3446,27 @@ body:not(.is-admin-mode) .admin-only-ui {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .btn-submit-pledge {
-  flex: 1;
+  flex: 1 1 180px;
+}
+
+@media (max-width: 420px) {
+  .pledge-footer-buttons {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .btn-submit-pledge,
+  .pledge-footer-buttons .btn-secondary {
+    width: 100%;
+    text-align: center;
+  }
 }
 
 /* Receipt View */
@@ -3648,47 +3686,68 @@ body:not(.is-admin-mode) .admin-only-ui {
    MULTI-USER FUNDING CREATION LANDING & SECURITY NOTICE STYLES
    ========================================================================== */
 .create-funding-landing {
-  padding-top: 28px;
-  padding-bottom: 56px;
+  padding-top: 18px;
+  padding-bottom: 48px;
+  width: 100%;
 }
 
 .create-landing-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
   align-items: start;
+  width: 100%;
+  max-width: 100%;
 }
 
 @media (min-width: 960px) {
   .create-landing-grid {
-    grid-template-columns: 1.05fr 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 28px;
   }
+}
+
+.create-intro-col,
+.create-form-col {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .create-intro-col {
   background: var(--bg-surface);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-lg);
-  padding: 26px 22px;
+  padding: 20px 16px;
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+}
+
+@media (max-width: 360px) {
+  .create-intro-col {
+    padding: 16px 12px;
+    border-radius: var(--radius-md);
+  }
 }
 
 @media (min-width: 640px) {
   .create-intro-col {
     padding: 32px 28px;
+    gap: 18px;
   }
 }
 
 .create-hero-title {
-  font-size: clamp(1.48rem, 4vw, 2.05rem);
+  font-size: clamp(1.32rem, 5.2vw, 1.95rem);
   font-weight: 800;
-  line-height: 1.28;
+  line-height: 1.3;
   letter-spacing: -0.025em;
   color: var(--text-primary);
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .create-hero-title span {
@@ -3696,97 +3755,166 @@ body:not(.is-admin-mode) .admin-only-ui {
 }
 
 .create-hero-desc {
-  font-size: 0.94rem;
+  font-size: clamp(0.85rem, 2.7vw, 0.94rem);
   color: var(--text-secondary);
-  line-height: 1.65;
+  line-height: 1.62;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
-/* 1. Security Warning Box (⚠️ 보안 안내) */
+/* Quick Action: 지금 바로 펀딩 만들기 버튼 (모바일 스크롤 없이 상단 노출) */
+.create-hero-quick-actions {
+  margin: 2px 0 2px;
+  width: 100%;
+}
+
+.create-quick-cta-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  font-size: clamp(0.92rem, 3.8vw, 1.05rem);
+  font-weight: 800;
+  padding: 13px 18px;
+  box-shadow: 0 6px 20px rgba(201, 134, 145, 0.35);
+  border-radius: var(--radius-pill);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-sizing: border-box;
+}
+
+.create-quick-cta-btn:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 8px 24px rgba(201, 134, 145, 0.45);
+}
+
+@media (min-width: 960px) {
+  .create-hero-quick-actions {
+    display: none;
+  }
+}
+
+/* 1. Security Warning Box (⚠️ 보안 안내 — 간략 표시 + 접이식 상세) */
 .security-warning-card {
   background: #FFFDF9;
   border: 1.5px solid #E5B887;
   border-left: 5px solid #D4843E;
   border-radius: var(--radius-md);
-  padding: 16px 18px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.security-warning-title {
-  font-size: 0.98rem;
+@media (max-width: 360px) {
+  .security-warning-card {
+    padding: 12px 12px;
+  }
+}
+
+.security-warning-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.security-warning-badge {
+  font-size: 0.86rem;
   font-weight: 800;
   color: #8F4B14;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
-.security-warning-p {
-  font-size: 0.86rem;
-  color: var(--text-primary);
-  line-height: 1.58;
-}
-
-.security-warning-p.highlight {
-  font-weight: 800;
-  color: #9C2E35;
-  background: rgba(184, 84, 92, 0.08);
-  padding: 6px 10px;
-  border-radius: var(--radius-xs);
-}
-
-/* 2. Password No-Recovery Notice Card */
-.password-no-recovery-card {
-  background: var(--bg-well);
-  border: 1.5px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  padding: 15px 18px;
-}
-
-.no-recovery-badge {
+.no-recovery-badge-inline {
   display: inline-block;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 800;
   color: #FFFFFF;
   background: var(--accent-danger);
-  padding: 3px 10px;
+  padding: 2px 8px;
   border-radius: var(--radius-pill);
-  margin-bottom: 8px;
 }
 
-.no-recovery-main-copy {
-  font-size: 0.9rem;
-  font-weight: 800;
+.security-warning-summary {
+  font-size: 0.84rem;
   color: var(--text-primary);
   line-height: 1.55;
-  margin-bottom: 6px;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.security-details-accordion {
+  margin-top: 2px;
+  border-top: 1px dashed rgba(212, 132, 62, 0.32);
+  padding-top: 8px;
+}
+
+.security-details-summary {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #B55F1E;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+
+.security-details-body {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.security-warning-p {
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  line-height: 1.55;
+  margin: 0;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .no-recovery-list {
   margin: 0;
   padding-left: 18px;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--text-secondary);
   line-height: 1.55;
-}
-
-.inline-password-alert {
-  background: #FDF3F4;
-  border: 1px solid #E9C2C7;
-  color: #8E3A42;
-  border-radius: var(--radius-sm);
-  padding: 10px 12px;
-  font-size: 0.81rem;
-  line-height: 1.5;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .create-form-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
-  padding: 26px 22px;
+  padding: 20px 16px;
   box-shadow: var(--shadow-card);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 360px) {
+  .create-form-card {
+    padding: 16px 12px;
+    border-radius: var(--radius-md);
+  }
 }
 
 @media (min-width: 640px) {
@@ -3801,6 +3929,8 @@ body:not(.is-admin-mode) .admin-only-ui {
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   margin-bottom: 14px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .optional-remit-details summary {
@@ -3823,23 +3953,42 @@ body:not(.is-admin-mode) .admin-only-ui {
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   margin-top: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .existing-funding-Jump-card {
   background: #FFF9F7;
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: 14px 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 360px) {
+  .existing-funding-Jump-card {
+    padding: 12px;
+  }
 }
 
 .jump-funding-row {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  width: 100%;
 }
 
 .jump-funding-row .form-input {
-  flex: 1 1 200px;
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+@media (max-width: 440px) {
+  .jump-funding-row .btn-secondary {
+    width: 100%;
+    text-align: center;
+  }
 }
 
 .recent-fundings-list {
@@ -4908,5 +5057,23 @@ body:not(.is-admin-mode) .admin-only-ui {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 440px) {
+  .crop-modal-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .crop-footer-right {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+  .crop-footer-right button,
+  .crop-modal-footer button {
+    flex: 1;
+    text-align: center;
+  }
 }
 

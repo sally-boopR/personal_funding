@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
   <title>personal_funding — 나만의 생일 선물 위시리스트 &amp; 펀딩</title>
   <meta name="application-name" content="personal_funding" />
   <meta name="description" content="personal_funding — 회원가입 없이 이름과 관리 비밀번호만으로 누구나 나만의 생일 선물 위시리스트 펀딩 페이지를 만들고 친구들과 공유하는 서비스" />
@@ -483,27 +483,42 @@
           <strong>personal_funding</strong>은 회원가입이나 이메일 인증 없이 <strong>이름과 관리 비밀번호(8자 이상)</strong>만 입력하면 고유 펀딩 주소가 발급되는 간편 선물 펀딩 서비스입니다. 받고 싶은 선물과 사진을 올리고 친구들에게 공유해 보세요!
         </p>
 
-        <!-- ★ 1. 필수 보안 안내창 (요구사항 반영) -->
-        <div class="security-warning-card" role="region" aria-label="보안 안내">
-          <div class="security-warning-title">⚠️ 보안 안내</div>
-          <p class="security-warning-p highlight">
-            다른 사이트에서 사용 중인 아이디나 비밀번호를 사용하지 마세요. 관리 비밀번호는 복구하거나 초기화할 수 없습니다. 비밀번호를 잊어버리면 펀딩 관리 권한을 잃게 됩니다.
-          </p>
-          <p class="security-warning-p">
-            본 서비스(<strong>personal_funding</strong>)는 별도의 회원가입이나 이메일 인증 없이 이용하는 간편 펀딩 서비스입니다. 보안을 위해 다른 사이트에서 평소 사용하는 아이디나 비밀번호를 절대 재사용하지 마시고, 이 서비스에서만 사용할 새로운 이름(관리용 식별자)과 비밀번호(8자 이상)를 설정하는 것을 권장합니다.
-          </p>
+        <!-- Quick Action: 바로 펀딩 만들기 버튼 (모바일에서 스크롤 없이 상단에서 즉시 접근) -->
+        <div class="create-hero-quick-actions">
+          <a href="#createFundingFormBox" class="btn-primary btn-lg create-quick-cta-btn" id="heroQuickCreateBtn">
+            <span>✨ 나만의 펀딩 만들기 (1분 완성)</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <polyline points="19 12 12 19 5 12"></polyline>
+            </svg>
+          </a>
         </div>
 
-        <!-- ★ 2. 비밀번호 분실 주의 안내창 (비밀번호 복구 기능 없음) -->
-        <div class="password-no-recovery-card" role="note" aria-label="비밀번호 보관 주의사항">
-          <div class="no-recovery-badge">🔒 비밀번호 찾기 · 초기화 불가 안내</div>
-          <p class="no-recovery-main-copy">
-            관리 비밀번호를 잊어버리면 펀딩을 다시 관리할 수 없습니다. 반드시 기억하거나 안전한 곳에 보관해 주세요.
+        <!-- ★ 보안 및 비밀번호 분실 주의 안내 (간략 표시 + 펼치기) -->
+        <div class="security-warning-card" role="region" aria-label="보안 및 비밀번호 보관 안내">
+          <div class="security-warning-header">
+            <span class="security-warning-badge">⚠️ 보안 주의</span>
+            <span class="no-recovery-badge-inline">🔒 비밀번호 복구 불가</span>
+          </div>
+          <p class="security-warning-summary">
+            관리 비밀번호는 <strong>복구·초기화할 수 없습니다.</strong> 다른 사이트와 다른 새 비밀번호를 설정하고 안전하게 보관해 주세요.
           </p>
-          <ul class="no-recovery-list">
-            <li>비밀번호 찾기 기능 없음 · 복구 코드 발급 기능 없음</li>
-            <li>이메일 인증 및 재설정 기능 없음 · 비밀번호 초기화 기능 없음</li>
-          </ul>
+          <details class="security-details-accordion">
+            <summary class="security-details-summary">
+              <span>자세한 보안 안내 및 분실 주의사항 보기</span>
+              <span class="accordion-arrow" aria-hidden="true">▾</span>
+            </summary>
+            <div class="security-details-body">
+              <p class="security-warning-p">
+                본 서비스는 별도의 회원가입이나 이메일 인증 없이 <strong>이름과 비밀번호(8자 이상)</strong>만으로 관리됩니다. 보안을 위해 다른 사이트에서 사용하는 비밀번호를 재사용하지 마세요.
+              </p>
+              <ul class="no-recovery-list">
+                <li>비밀번호 찾기 기능 없음 · 복구 코드 발급 기능 없음</li>
+                <li>이메일 인증 및 재설정 기능 없음 · 비밀번호 초기화 기능 없음</li>
+                <li>비밀번호 분실 시 펀딩 수정·승인 등 관리 권한이 영구 상실됩니다.</li>
+              </ul>
+            </div>
+          </details>
         </div>
 
         <!-- Go to Existing Funding ID Box & Recent Fundings on This Device -->
@@ -712,7 +727,7 @@
                         <option value="contain">전체 보기 (사진 전체가 보이도록 맞춤)</option>
                       </select>
                     </div>
-                    <div style="display: flex; gap: 6px; align-items: center; margin-top: 4px;">
+                    <div style="display: flex; gap: 6px; align-items: center; margin-top: 4px; flex-wrap: wrap;">
                       <button type="button" class="btn-secondary btn-xs" id="createIntroPhotoRecropBtn">✂️ 사진 다시 편집</button>
                       <button type="button" class="btn-subtle btn-xs" id="createIntroPhotoCancelBtn">선택 취소</button>
                     </div>
