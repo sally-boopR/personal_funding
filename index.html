@@ -103,6 +103,175 @@
   <!-- Celebration Confetti Canvas Overlay (Used on Main Page Approval) -->
   <canvas id="confettiCanvas" aria-hidden="true"></canvas>
 
+  <!-- 100% Funding Goal Achievement Soft Bunny Drumming Celebration Overlay -->
+  <div id="bunnyCelebrationOverlay" class="bunny-celebration-overlay" hidden aria-hidden="true" role="dialog" aria-label="100% 펀딩 달성 축하">
+    <div class="bunny-celebration-backdrop" id="bunnyCelebrationBackdrop"></div>
+    <div class="bunny-celebration-dialog" id="bunnyCelebrationDialog">
+      <button type="button" class="bunny-close-btn" id="bunnyCloseBtn" aria-label="축하 화면 닫기">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+
+      <!-- Cute Speech Bubble -->
+      <div class="bunny-speech-bubble" id="bunnySpeechBubble">
+        <div class="bunny-bubble-badge" id="bunnyBubbleBadge">✨ 100% GOAL ACHIEVED! ✨</div>
+        <h3 class="bunny-bubble-title" id="bunnyBubbleTitle">펀딩 달성! 마음이 모였어요 ♡</h3>
+        <p class="bunny-bubble-gift" id="bunnyBubbleGift">소중한 마음이 선물에 닿았습니다</p>
+      </div>
+
+      <!-- Drum Sparkles & Floating Hearts Container -->
+      <div class="bunny-burst-container" id="bunnyBurstContainer" aria-hidden="true">
+        <span class="sparkle-particle p1">♡</span>
+        <span class="sparkle-particle p2">✨</span>
+        <span class="sparkle-particle p3">✦</span>
+        <span class="sparkle-particle p4">💖</span>
+        <span class="sparkle-particle p5">★</span>
+        <span class="sparkle-particle p6">♡</span>
+        <span class="sparkle-particle p7">♫</span>
+        <span class="sparkle-particle p8">✦</span>
+      </div>
+
+      <!-- Vector SVG Bunny Drummer -->
+      <div class="bunny-svg-wrapper" id="bunnySvgWrapper">
+        <svg class="bunny-svg" viewBox="0 0 320 340" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-label="북 치는 토끼 일러스트">
+          <defs>
+            <radialGradient id="bunnyFloorShadow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#C98691" stop-opacity="0.32" />
+              <stop offset="70%" stop-color="#E8C5CC" stop-opacity="0.12" />
+              <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+            </radialGradient>
+            <linearGradient id="drumShellGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#F2A4B3" />
+              <stop offset="25%" stop-color="#FCD5DE" />
+              <stop offset="75%" stop-color="#FCD5DE" />
+              <stop offset="100%" stop-color="#E593A3" />
+            </linearGradient>
+            <radialGradient id="drumHeadGrad" cx="50%" cy="45%" r="55%">
+              <stop offset="0%" stop-color="#FFFFFF" />
+              <stop offset="70%" stop-color="#FFF8F2" />
+              <stop offset="100%" stop-color="#F6E4E8" />
+            </radialGradient>
+            <linearGradient id="bunnyFurGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+              <stop offset="0%" stop-color="#FFFFFF" />
+              <stop offset="85%" stop-color="#FFFFFF" />
+              <stop offset="100%" stop-color="#FFF2F4" />
+            </linearGradient>
+            <linearGradient id="earInnerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#FFAEBE" />
+              <stop offset="100%" stop-color="#FFD9E2" />
+            </linearGradient>
+            <linearGradient id="ribbonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#F48CA0" />
+              <stop offset="100%" stop-color="#DE6E84" />
+            </linearGradient>
+          </defs>
+
+          <!-- Floor Shadow -->
+          <ellipse cx="160" cy="318" rx="100" ry="16" fill="url(#bunnyFloorShadow)" />
+
+          <!-- Back Ears -->
+          <g class="bunny-ears-group">
+            <g class="bunny-ear bunny-ear-left">
+              <path d="M 122 88 C 104 42, 98 12, 118 10 C 138 8, 140 40, 134 88 Z" fill="url(#bunnyFurGrad)" stroke="#E8B5C0" stroke-width="2.6" stroke-linejoin="round" />
+              <path d="M 122 78 C 110 44, 108 20, 119 18 C 130 16, 131 42, 128 78 Z" fill="url(#earInnerGrad)" />
+            </g>
+            <g class="bunny-ear bunny-ear-right">
+              <path d="M 186 88 C 180 40, 182 8, 202 10 C 222 12, 216 42, 198 88 Z" fill="url(#bunnyFurGrad)" stroke="#E8B5C0" stroke-width="2.6" stroke-linejoin="round" />
+              <path d="M 192 78 C 189 42, 190 16, 201 18 C 212 20, 210 44, 198 78 Z" fill="url(#earInnerGrad)" />
+            </g>
+
+            <!-- Cute Ribbon on Right Ear -->
+            <g class="bunny-ribbon">
+              <path d="M 194 92 C 190 102, 184 108, 180 114 C 185 111, 191 108, 195 98 Z" fill="#DE6E84" />
+              <path d="M 204 92 C 208 102, 214 108, 218 114 C 213 111, 207 108, 203 98 Z" fill="#DE6E84" />
+              <path d="M 198 90 C 182 80, 178 96, 196 93 Z" fill="url(#ribbonGrad)" stroke="#C85A70" stroke-width="1.2" />
+              <path d="M 200 90 C 216 80, 220 96, 202 93 Z" fill="url(#ribbonGrad)" stroke="#C85A70" stroke-width="1.2" />
+              <circle cx="199" cy="91" r="4.2" fill="#FFE5A3" stroke="#DCA24C" stroke-width="1" />
+            </g>
+          </g>
+
+          <!-- Bunny Main Body & Head -->
+          <g class="bunny-main-body">
+            <!-- Feet -->
+            <g class="bunny-feet">
+              <ellipse cx="106" cy="286" rx="22" ry="14" fill="#FFFFFF" stroke="#E8B5C0" stroke-width="2.4" />
+              <ellipse cx="214" cy="286" rx="22" ry="14" fill="#FFFFFF" stroke="#E8B5C0" stroke-width="2.4" />
+              <circle cx="106" cy="287" r="4" fill="#FFCCD7" />
+              <circle cx="214" cy="287" r="4" fill="#FFCCD7" />
+            </g>
+
+            <!-- Fluffy Pear Body -->
+            <path d="M 112 165 C 88 198, 92 270, 160 270 C 228 270, 232 198, 208 165 C 196 148, 124 148, 112 165 Z" fill="url(#bunnyFurGrad)" stroke="#E8B5C0" stroke-width="2.6" />
+            <ellipse cx="160" cy="225" rx="42" ry="32" fill="#FFF2F5" opacity="0.8" />
+
+            <!-- Round Face -->
+            <ellipse class="bunny-head" cx="160" cy="132" rx="64" ry="54" fill="url(#bunnyFurGrad)" stroke="#E8B5C0" stroke-width="2.6" />
+
+            <!-- Blush Cheeks -->
+            <ellipse class="bunny-blush bunny-blush-left" cx="118" cy="144" rx="14" ry="8" fill="#FFB2C2" opacity="0.75" />
+            <ellipse class="bunny-blush bunny-blush-right" cx="202" cy="144" rx="14" ry="8" fill="#FFB2C2" opacity="0.75" />
+
+            <!-- Normal Eyes -->
+            <g class="bunny-eyes-normal">
+              <circle cx="132" cy="126" r="6.2" fill="#3D292C" />
+              <circle cx="130" cy="123.5" r="2.4" fill="#FFFFFF" />
+              <circle cx="134" cy="128" r="1.1" fill="#FFFFFF" />
+              <circle cx="188" cy="126" r="6.2" fill="#3D292C" />
+              <circle cx="186" cy="123.5" r="2.4" fill="#FFFFFF" />
+              <circle cx="190" cy="128" r="1.1" fill="#FFFFFF" />
+            </g>
+
+            <!-- Happy Eyes (Celebration Victory) -->
+            <g class="bunny-eyes-happy">
+              <path d="M 124 128 Q 132 118 140 128" fill="none" stroke="#3D292C" stroke-width="2.8" stroke-linecap="round" />
+              <path d="M 180 128 Q 188 118 196 128" fill="none" stroke="#3D292C" stroke-width="2.8" stroke-linecap="round" />
+            </g>
+
+            <!-- Nose & Mouth -->
+            <circle cx="160" cy="133" r="2.8" fill="#E8788D" />
+            <path class="bunny-mouth-normal" d="M 153 138 Q 156.5 143 160 139 Q 163.5 143 167 138" fill="none" stroke="#995864" stroke-width="2" stroke-linecap="round" />
+            <g class="bunny-mouth-happy">
+              <path d="M 152 137 Q 160 149 168 137 Z" fill="#E86E84" stroke="#995864" stroke-width="1.8" stroke-linejoin="round" />
+              <path d="M 155 141 Q 160 147 165 141 Z" fill="#FFAEC0" />
+            </g>
+          </g>
+
+          <!-- Toy Drum -->
+          <g class="bunny-drum-group">
+            <path d="M 85 240 L 85 285 Q 160 310 235 285 L 235 240 Q 160 262 85 240 Z" fill="url(#drumShellGrad)" stroke="#DF8A9B" stroke-width="2.4" stroke-linejoin="round" />
+            <path d="M 92 245 L 115 292 L 138 248 L 160 295 L 182 248 L 205 292 L 228 245" fill="none" stroke="#FFF7ED" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+            <circle cx="115" cy="292" r="3.2" fill="#FDD680" stroke="#DF9B35" stroke-width="1" />
+            <circle cx="138" cy="248" r="3.2" fill="#FDD680" stroke="#DF9B35" stroke-width="1" />
+            <circle cx="160" cy="295" r="3.2" fill="#FDD680" stroke="#DF9B35" stroke-width="1" />
+            <circle cx="182" cy="248" r="3.2" fill="#FDD680" stroke="#DF9B35" stroke-width="1" />
+            <circle cx="205" cy="292" r="3.2" fill="#FDD680" stroke="#DF9B35" stroke-width="1" />
+            <ellipse cx="160" cy="285" rx="75" ry="18" fill="none" stroke="#DF8A9B" stroke-width="2.4" />
+            <ellipse class="drum-surface" cx="160" cy="240" rx="75" ry="20" fill="url(#drumHeadGrad)" stroke="#DF8A9B" stroke-width="2.8" />
+            <ellipse cx="160" cy="240" rx="66" ry="16" fill="none" stroke="#F5CAD3" stroke-width="1.4" stroke-dasharray="4 2" />
+          </g>
+
+          <!-- Left Arm & Drumstick (Pivot: 104, 170) -->
+          <g class="bunny-arm-group bunny-arm-left" id="bunnyArmLeft">
+            <path d="M 104 170 C 94 186, 96 215, 122 222 C 128 224, 134 218, 130 210 C 118 190, 116 178, 104 170 Z" fill="#FFFFFF" stroke="#E8B5C0" stroke-width="2.4" />
+            <circle cx="125" cy="216" r="9" fill="#FFFFFF" stroke="#E8B5C0" stroke-width="2.4" />
+            <line x1="123" y1="214" x2="134" y2="236" stroke="#FCE0B0" stroke-width="3.6" stroke-linecap="round" />
+            <circle cx="134" cy="236" r="5" fill="#E8788D" stroke="#D15F75" stroke-width="1.2" />
+          </g>
+
+          <!-- Right Arm & Drumstick (Pivot: 216, 170) -->
+          <g class="bunny-arm-group bunny-arm-right" id="bunnyArmRight">
+            <path d="M 216 170 C 226 186, 224 215, 198 222 C 192 224, 186 218, 190 210 C 202 190, 204 178, 216 170 Z" fill="#FFFFFF" stroke="#E8B5C0" stroke-width="2.4" />
+            <circle cx="195" cy="216" r="9" fill="#FFFFFF" stroke="#E8B5C0" stroke-width="2.4" />
+            <line x1="197" y1="214" x2="186" y2="236" stroke="#FCE0B0" stroke-width="3.6" stroke-linecap="round" />
+            <circle cx="186" cy="236" r="5" fill="#E8788D" stroke="#D15F75" stroke-width="1.2" />
+          </g>
+        </svg>
+      </div>
+    </div>
+  </div>
+
   <!-- Top Navigation Header (Mobile-First Compact + Desktop Wide) -->
   <header class="top-nav">
     <div class="container nav-inner">

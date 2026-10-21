@@ -800,6 +800,7 @@
     renderApp();
     await prepareAndBindIntro();
     startBirthdayIntroAnimation(forcePlayIntro);
+    checkUncelebratedGiftsOnLoad();
   }
 
   function setupRealtimeForCurrentCampaign(campaignId) {
@@ -2014,7 +2015,10 @@
 
         let statusBadge = '';
         if (metrics.isCompleted) {
-          statusBadge = `<span class="status-pill completed">100% 달성 완료</span>`;
+          statusBadge = `
+            <span class="status-pill completed">100% 달성 완료</span>
+            <button type="button" class="btn-replay-celebration" data-action="replay-gift-celebration" data-gift-id="${escapeHtml(gift.id)}" title="100% 달성 축하 애니메이션 다시보기">🐰 축하 다시보기</button>
+          `;
         } else if (metrics.pendingCount > 0) {
           statusBadge = `<span class="status-pill in-progress">승인 ${metrics.approvedCount} · 대기 ${metrics.pendingCount}</span>`;
         } else {
@@ -4172,6 +4176,98 @@
     }, 3400);
   }
 
+  // =========================================================================
+  // 100% FUNDING GOAL ACHIEVEMENT SOFT BUNNY CELEBRATION CONTROLLER
+  // =========================================================================
+  let bunnyCelebrationTimer1 = null;
+  let bunnyCelebrationTimer2 = null;
+  let bunnyCelebrationTimer3 = null;
+
+  function getGiftCelebrationKey(campaignId, giftId) {
+    return `pf_celebrated_100_${campaignId}_${giftId}`;
+  }
+
+  function hasGiftBeenCelebrated(campaignId, giftId) {
+    if (!campaignId || !giftId) return true;
+    try {
+      return localStorage.getItem(getGiftCelebrationKey(campaignId, giftId)) === '1';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function markGiftCelebrated(campaignId, giftId) {
+    if (!campaignId || !giftId) return;
+    try {
+      localStorage.setItem(getGiftCelebrationKey(campaignId, giftId), '1');
+    } catch (e) {}
+  }
+
+  function closeBunnyCelebration() {
+    clearTimeout(bunnyCelebrationTimer1);
+    clearTimeout(bunnyCelebrationTimer2);
+    clearTimeout(bunnyCelebrationTimer3);
+    const overlay = document.getElementById('bunnyCelebrationOverlay');
+    const dialog = document.getElementById('bunnyCelebrationDialog');
+    if (dialog) dialog.classList.remove('is-triumph', 'is-fading-out');
+    if (overlay) {
+      overlay.hidden = true;
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  function playBunnyCelebration(gift) {
+    if (!gift) return;
+    closeBunnyCelebration();
+
+    const overlay = document.getElementById('bunnyCelebrationOverlay');
+    const dialog = document.getElementById('bunnyCelebrationDialog');
+    const titleEl = document.getElementById('bunnyBubbleTitle');
+    const giftEl = document.getElementById('bunnyBubbleGift');
+    if (!overlay || !dialog) return;
+
+    if (titleEl) {
+      titleEl.textContent = '펀딩 달성! 마음이 모였어요 ♡';
+    }
+    if (giftEl) {
+      giftEl.textContent = `「${gift.title || '위시 선물'}」 100% 달성 축하 🎉`;
+    }
+
+    dialog.classList.remove('is-triumph', 'is-fading-out');
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+
+    // 2.3s: Triumph victory pose (arms raised with drumsticks, laughing eyes, happy smile, confetti!)
+    bunnyCelebrationTimer1 = setTimeout(() => {
+      dialog.classList.add('is-triumph');
+      launchConfetti();
+    }, 2300);
+
+    // 3.6s: Soft fade-out slide down
+    bunnyCelebrationTimer2 = setTimeout(() => {
+      dialog.classList.add('is-fading-out');
+    }, 3600);
+
+    // 4.0s: Clean up and hide
+    bunnyCelebrationTimer3 = setTimeout(() => {
+      closeBunnyCelebration();
+    }, 4000);
+  }
+
+  function checkUncelebratedGiftsOnLoad() {
+    if (!currentCampaignId || !Array.isArray(state.gifts)) return;
+    const completedUnseen = state.gifts.find((g) => {
+      const m = getGiftMetrics(g);
+      return m.isCompleted && !hasGiftBeenCelebrated(currentCampaignId, g.id);
+    });
+    if (completedUnseen) {
+      setTimeout(() => {
+        markGiftCelebrated(currentCampaignId, completedUnseen.id);
+        playBunnyCelebration(completedUnseen);
+      }, 900);
+    }
+  }
+
   function closeMobileDrawer() {
     const drawer = document.getElementById('mobileNavDrawer');
     const toggleBtn = document.getElementById('mobileMenuToggleBtn');
@@ -4508,6 +4604,11 @@
           }
           showToast('선물이 삭제되었습니다.');
         }
+      } else if (action === 'replay-gift-celebration') {
+        const targetGift = state.gifts.find((g) => g.id === giftId);
+        if (targetGift) {
+          playBunnyCelebration(targetGift);
+        }
       }
     });
 
@@ -4544,6 +4645,9 @@
 
       if (action === 'approve-pledge') {
         if (!requireAdminPermission('입금 확인 승인')) return;
+        const targetGiftBefore = state.gifts.find((g) => g.id === target.giftId);
+        const wasCompletedBefore = targetGiftBefore ? getGiftMetrics(targetGiftBefore).isCompleted : false;
+
         if (isCloudConnected && supabaseClient) {
           const token = getStoredOwnerSessionToken(currentCampaignId);
           const { error } = await supabaseClient.rpc('owner_set_contribution_status', {
@@ -4562,7 +4666,16 @@
           saveCurrentStateToLocalMultiDb();
           renderApp();
         }
-        launchConfetti();
+
+        const targetGiftAfter = state.gifts.find((g) => g.id === target.giftId) || targetGiftBefore;
+        const isCompletedNow = targetGiftAfter ? getGiftMetrics(targetGiftAfter).isCompleted : false;
+
+        if (!wasCompletedBefore && isCompletedNow) {
+          markGiftCelebrated(currentCampaignId, targetGiftAfter.id);
+          playBunnyCelebration(targetGiftAfter);
+        } else {
+          launchConfetti();
+        }
         showToast(`✅ ${target.senderName}님의 입금(${formatKRW(target.amount)})이 승인되어 달성률에 반영되었습니다!`);
       } else if (action === 'unapprove-pledge') {
         if (!requireAdminPermission('입금 승인 취소')) return;
@@ -4998,6 +5111,16 @@
       });
     }
 
+    // Bunny 100% Celebration Close Events
+    const bunnyCloseBtn = document.getElementById('bunnyCloseBtn');
+    if (bunnyCloseBtn) {
+      bunnyCloseBtn.addEventListener('click', closeBunnyCelebration);
+    }
+    const bunnyBackdrop = document.getElementById('bunnyCelebrationBackdrop');
+    if (bunnyBackdrop) {
+      bunnyBackdrop.addEventListener('click', closeBunnyCelebration);
+    }
+
     document.querySelectorAll('.modal-backdrop').forEach((backdrop) => {
       backdrop.addEventListener('click', (e) => {
         if (e.target === backdrop) {
@@ -5012,6 +5135,7 @@
         if (!introFinished) {
           finishBirthdayIntro();
         }
+        closeBunnyCelebration();
         closePledgeModal();
         closeAvatarManageModal();
         closeGiftModal();

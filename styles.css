@@ -3894,3 +3894,337 @@ body:not(.is-admin-mode) .admin-only-ui {
   background: #FFFFFF;
 }
 
+/* ==========================================================================
+   4. 100% FUNDING ACHIEVEMENT SOFT BUNNY CELEBRATION ANIMATION (Sanrio Mood)
+   ========================================================================== */
+.bunny-celebration-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  padding: 16px;
+}
+
+.bunny-celebration-overlay[hidden] {
+  display: none !important;
+}
+
+.bunny-celebration-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(54, 25, 35, 0.48);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: bunnyFadeIn 0.32s ease forwards;
+}
+
+.bunny-celebration-dialog {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(360px, 92vw);
+  max-width: 100%;
+  animation: bunnyBounceIn 0.58s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.bunny-celebration-dialog.is-fading-out {
+  animation: bunnyFadeOut 0.42s ease forwards;
+}
+
+.bunny-close-btn {
+  position: absolute;
+  top: -12px;
+  right: 6px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 1.5px solid var(--pink-main);
+  color: var(--pink-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(169, 101, 117, 0.25);
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.bunny-close-btn:hover {
+  background: var(--pink-main);
+  color: #FFFFFF;
+  transform: rotate(90deg) scale(1.06);
+}
+
+/* Soft Pastel Speech Bubble */
+.bunny-speech-bubble {
+  background: #FFFDFB;
+  border: 2.2px solid var(--pink-main);
+  border-radius: 22px;
+  padding: 14px 20px 15px;
+  text-align: center;
+  box-shadow: 0 14px 38px -8px rgba(169, 101, 117, 0.32);
+  margin-bottom: 12px;
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  animation: bubblePop 0.52s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+}
+
+.bunny-speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 11px solid var(--pink-main);
+}
+
+.bunny-speech-bubble::before {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid #FFFDFB;
+  z-index: 1;
+}
+
+.bunny-bubble-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--pink-deep);
+  background: #FFE8ED;
+  border-radius: 999px;
+  padding: 3px 11px;
+  margin-bottom: 6px;
+  border: 1px solid rgba(234, 168, 183, 0.45);
+}
+
+.bunny-bubble-title {
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: #4A2830;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.02em;
+}
+
+.bunny-bubble-gift {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--pink-main);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Bunny SVG Container */
+.bunny-svg-wrapper {
+  width: 290px;
+  height: 300px;
+  max-width: 86vw;
+  position: relative;
+  user-select: none;
+}
+
+/* Floating Sparkle Particles Around Drum */
+.bunny-burst-container {
+  position: absolute;
+  width: 280px;
+  height: 180px;
+  bottom: 80px;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.sparkle-particle {
+  position: absolute;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 2px 8px rgba(244, 140, 160, 0.75);
+  animation: floatSparkle 1.6s ease-out infinite;
+  opacity: 0;
+}
+
+.sparkle-particle.p1 { left: 45px; bottom: 35px; font-size: 1.3rem; color: #F48CA0; animation-delay: 0.05s; }
+.sparkle-particle.p2 { left: 85px; bottom: 50px; font-size: 1.1rem; color: #FDD680; animation-delay: 0.28s; }
+.sparkle-particle.p3 { left: 125px; bottom: 65px; font-size: 1.2rem; color: #F48CA0; animation-delay: 0.52s; }
+.sparkle-particle.p4 { right: 110px; bottom: 60px; font-size: 1.35rem; color: #DE6E84; animation-delay: 0.15s; }
+.sparkle-particle.p5 { right: 70px; bottom: 45px; font-size: 1.15rem; color: #FDD680; animation-delay: 0.42s; }
+.sparkle-particle.p6 { right: 35px; bottom: 35px; font-size: 1.25rem; color: #F48CA0; animation-delay: 0.68s; }
+.sparkle-particle.p7 { left: 60px; bottom: 70px; font-size: 1.2rem; color: #C98691; animation-delay: 0.35s; }
+.sparkle-particle.p8 { right: 50px; bottom: 75px; font-size: 1.1rem; color: #F48CA0; animation-delay: 0.58s; }
+
+/* Alternating Drumming Animations */
+.bunny-arm-left {
+  transform-origin: 104px 170px;
+  animation: bunnyDrumLeft 0.22s ease-in-out infinite alternate;
+}
+
+.bunny-arm-right {
+  transform-origin: 216px 170px;
+  animation: bunnyDrumRight 0.22s ease-in-out infinite alternate;
+  animation-delay: -0.11s;
+}
+
+.bunny-main-body {
+  transform-origin: 160px 270px;
+  animation: bunnyBodyBounce 0.22s ease-in-out infinite alternate;
+}
+
+.bunny-ear-left {
+  transform-origin: 122px 88px;
+  animation: bunnyEarSwayL 0.44s ease-in-out infinite alternate;
+}
+
+.bunny-ear-right {
+  transform-origin: 186px 88px;
+  animation: bunnyEarSwayR 0.44s ease-in-out infinite alternate;
+}
+
+/* Triumph State (Victory pose at the end of celebration) */
+.bunny-celebration-dialog.is-triumph .bunny-arm-left {
+  animation: bunnyArmTriumphL 0.36s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, bunnyArmWaveL 0.38s ease-in-out 0.36s infinite alternate !important;
+}
+
+.bunny-celebration-dialog.is-triumph .bunny-arm-right {
+  animation: bunnyArmTriumphR 0.36s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, bunnyArmWaveR 0.38s ease-in-out 0.36s infinite alternate !important;
+}
+
+.bunny-celebration-dialog.is-triumph .bunny-eyes-normal,
+.bunny-celebration-dialog.is-triumph .bunny-mouth-normal {
+  display: none !important;
+}
+
+.bunny-celebration-dialog.is-triumph .bunny-eyes-happy,
+.bunny-celebration-dialog.is-triumph .bunny-mouth-happy {
+  display: block !important;
+}
+
+/* Keyframes */
+@keyframes bunnyFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes bunnyBounceIn {
+  0% { transform: translateY(115%) scale(0.65); opacity: 0; }
+  65% { transform: translateY(-14px) scale(1.06); opacity: 1; }
+  85% { transform: translateY(4px) scale(0.98); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes bunnyFadeOut {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(70px) scale(0.85); opacity: 0; }
+}
+
+@keyframes bubblePop {
+  0% { transform: translateY(12px) scale(0.85); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes bunnyDrumLeft {
+  0% { transform: rotate(-6deg); }
+  100% { transform: rotate(18deg); }
+}
+
+@keyframes bunnyDrumRight {
+  0% { transform: rotate(6deg); }
+  100% { transform: rotate(-18deg); }
+}
+
+@keyframes bunnyBodyBounce {
+  0% { transform: translateY(0) scale(1, 1); }
+  100% { transform: translateY(2.8px) scale(1.018, 0.982); }
+}
+
+@keyframes bunnyEarSwayL {
+  0% { transform: rotate(-4deg); }
+  100% { transform: rotate(4deg); }
+}
+
+@keyframes bunnyEarSwayR {
+  0% { transform: rotate(4deg); }
+  100% { transform: rotate(-4deg); }
+}
+
+@keyframes bunnyArmTriumphL {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(-76deg); }
+}
+
+@keyframes bunnyArmTriumphR {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(76deg); }
+}
+
+@keyframes bunnyArmWaveL {
+  0% { transform: rotate(-76deg); }
+  100% { transform: rotate(-86deg); }
+}
+
+@keyframes bunnyArmWaveR {
+  0% { transform: rotate(76deg); }
+  100% { transform: rotate(86deg); }
+}
+
+@keyframes floatSparkle {
+  0% {
+    transform: translateY(0) scale(0.4) rotate(0deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.95;
+    transform: translateY(-24px) scale(1.05) rotate(15deg);
+  }
+  75% {
+    opacity: 0.85;
+    transform: translateY(-52px) scale(0.95) rotate(-10deg);
+  }
+  100% {
+    transform: translateY(-75px) scale(0.6) rotate(20deg);
+    opacity: 0;
+  }
+}
+
+/* Replay Celebration Button on Completed Card */
+.btn-replay-celebration {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--pink-deep);
+  background: #FFF2F5;
+  border: 1px solid var(--pink-main);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1.2;
+}
+
+.btn-replay-celebration:hover {
+  background: var(--pink-main);
+  color: #FFFFFF;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(169, 101, 117, 0.25);
+}
+
