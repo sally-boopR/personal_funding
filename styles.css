@@ -162,7 +162,8 @@ html.intro-skipped .site-footer {
 }
 
 /* Hide Intro Immediately when Skipped via sessionStorage or Reduced Motion */
-html.intro-skipped .birthday-intro-overlay {
+html.intro-skipped .birthday-intro-overlay,
+.birthday-intro-overlay[hidden] {
   display: none !important;
   pointer-events: none !important;
 }
@@ -305,6 +306,12 @@ html.intro-fading-out .birthday-intro-overlay {
   animation: introCardAppear 0.7s var(--ease-out) both;
 }
 
+.intro-center-stage.is-preparing {
+  opacity: 0 !important;
+  transform: translateY(16px) scale(0.96) !important;
+  animation: none !important;
+}
+
 @media (min-width: 640px) {
   .intro-center-stage {
     padding: 44px 36px;
@@ -344,7 +351,7 @@ html.intro-fading-out .birthday-intro-overlay {
   font-size: 0.76rem;
 }
 
-/* Intro Character Illustration Frame (Original Aspect Ratio Preserved, No Crop/Distortion) */
+/* Intro Photo Frame (Displayed only when custom photo is registered) */
 .intro-character-frame {
   margin: 4px auto 2px;
   padding: 6px;
@@ -360,6 +367,10 @@ html.intro-fading-out .birthday-intro-overlay {
   animation: introTextRise 0.72s var(--ease-out) 0.18s forwards;
 }
 
+.intro-character-frame[hidden] {
+  display: none !important;
+}
+
 .intro-character-img {
   display: block;
   width: 100%;
@@ -367,6 +378,13 @@ html.intro-fading-out .birthday-intro-overlay {
   max-height: 26dvh;
   object-fit: contain;
   border-radius: calc(var(--radius-md) - 5px);
+  transition: opacity 0.2s ease;
+}
+
+.intro-character-img:not([src]),
+.intro-character-img[src=""] {
+  opacity: 0 !important;
+  visibility: hidden !important;
 }
 
 @media (min-width: 640px) {
@@ -441,6 +459,36 @@ html.intro-fading-out .birthday-intro-overlay {
 
 .intro-preview-thumbnail.fit-contain {
   object-fit: contain;
+}
+
+.intro-preview-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 6px;
+  background: var(--bg-card, #fbf7f4);
+  color: var(--text-muted, #8b7d7b);
+  text-align: center;
+  gap: 2px;
+  user-select: none;
+}
+
+.intro-preview-placeholder[hidden] {
+  display: none !important;
+}
+
+.intro-preview-placeholder .placeholder-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.intro-preview-placeholder .placeholder-text {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
 .intro-preview-controls,

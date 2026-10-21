@@ -64,39 +64,38 @@
     </button>
 
     <!-- Center Typography Sequence -->
-    <div class="intro-center-stage">
+    <div class="intro-center-stage is-preparing" id="introCenterStage">
       <div class="intro-crown-badge" aria-hidden="true">
         <span class="intro-sparkle-dot">✦</span>
-        <span class="intro-date-tag" id="introDateTag">PERSONAL_FUNDING · SPECIAL BIRTHDAY</span>
+        <span class="intro-date-tag" id="introDateTag">PERSONAL_FUNDING · SPECIAL CELEBRATION</span>
         <span class="intro-sparkle-dot">✦</span>
       </div>
 
-      <figure class="intro-character-frame" id="introPhotoFrame">
+      <figure class="intro-character-frame" id="introPhotoFrame" hidden>
         <img
-          src="./intro-character.png"
-          alt="생일 축하 인트로 사진"
+          src=""
+          alt="축하 인트로 사진"
           class="intro-character-img"
           id="introPhotoImg"
-          data-default-src="./intro-character.png"
         />
       </figure>
 
-      <h1 class="intro-en-title" aria-label="Happy Birthday!">
+      <h1 class="intro-en-title" id="introEnTitle" aria-label="Happy Birthday!">
         Happy Birthday!
       </h1>
 
       <div class="intro-divider-ornament" aria-hidden="true">
         <span class="ornament-line"></span>
-        <span class="ornament-heart">♡</span>
+        <span class="ornament-heart" id="introOrnamentIcon">♡</span>
         <span class="ornament-line"></span>
       </div>
 
       <p class="intro-kr-title" id="introKrTitle">
-        생일 축하해 <span class="intro-heart-beat" aria-hidden="true">♡</span>
+        생일을 축하합니다! <span class="intro-heart-beat" aria-hidden="true">♡</span>
       </p>
 
       <p class="intro-sub-caption" id="introSubCaption">
-        소중한 마음을 담은 생일 위시리스트가 열립니다
+        소중한 마음을 담은 선물 위시리스트가 열립니다
       </p>
     </div>
   </div>
@@ -346,8 +345,8 @@
         <div class="create-form-card" id="createFundingFormBox">
           <div class="modal-header" style="margin-bottom: 16px;">
             <span class="modal-eyebrow">personal_funding · CREATE MY FUNDING</span>
-            <h2 class="modal-title">새 생일 펀딩 페이지 만들기</h2>
-            <p class="modal-subtitle">이름과 관리 비밀번호(8자 이상)만 입력하면 즉시 나만의 공유 URL이 발급됩니다.</p>
+            <h2 class="modal-title" id="createFormTitle">새 선물 펀딩 페이지 만들기</h2>
+            <p class="modal-subtitle">이벤트 종류와 이름, 관리 비밀번호(8자 이상)만 입력하면 즉시 나만의 공유 URL이 발급됩니다.</p>
           </div>
 
           <form id="createFundingForm" novalidate>
@@ -359,7 +358,30 @@
 
             <div class="form-row-2col">
               <div class="form-group">
-                <label class="form-label" for="createHostNameInput">1. 생일 주인공 이름 (필수)</label>
+                <label class="form-label" for="createEventTypeSelect">1. 축하 이벤트 종류</label>
+                <select id="createEventTypeSelect" class="form-select">
+                  <option value="birthday" selected>🎂 생일 (생일을 축하합니다!)</option>
+                  <option value="graduation">🎓 졸업 (졸업을 축하합니다!)</option>
+                  <option value="wedding">💍 결혼 (결혼을 축하합니다!)</option>
+                  <option value="employment">💼 입사 (입사를 축하합니다!)</option>
+                  <option value="admission">🎒 입학 (입학을 축하합니다!)</option>
+                  <option value="custom">✨ 직접 설정</option>
+                </select>
+              </div>
+
+              <div class="form-group" id="createEventCustomBox" hidden>
+                <label class="form-label" for="createEventCustomTextInput">직접 설정 축하 문구</label>
+                <input
+                  type="text"
+                  id="createEventCustomTextInput"
+                  class="form-input"
+                  placeholder="원하는 축하 문구 입력 (예: 승진을 축하합니다!)"
+                  maxlength="35"
+                />
+              </div>
+
+              <div class="form-group" id="createHostNameBox">
+                <label class="form-label" for="createHostNameInput" id="createHostNameLabel">2. 주인공 이름 (필수)</label>
                 <input
                   type="text"
                   id="createHostNameInput"
@@ -369,9 +391,11 @@
                   required
                 />
               </div>
+            </div>
 
+            <div class="form-row-2col">
               <div class="form-group">
-                <label class="form-label" for="createBirthdayDateInput">2. 생일 날짜</label>
+                <label class="form-label" for="createBirthdayDateInput" id="createDateLabel">3. 기념일 날짜</label>
                 <input
                   type="date"
                   id="createBirthdayDateInput"
@@ -379,11 +403,28 @@
                   required
                 />
               </div>
+
+              <div class="form-group">
+                <label class="form-label" for="createEmojiSelect">대표 아이콘</label>
+                <select id="createEmojiSelect" class="form-select">
+                  <option value="🎂" selected>🎂 생일 케이크</option>
+                  <option value="🎓">🎓 학사모 / 졸업</option>
+                  <option value="💍">💍 웨딩 링 / 결혼</option>
+                  <option value="💼">💼 서류가방 / 입사</option>
+                  <option value="🎒">🎒 책가방 / 입학</option>
+                  <option value="🎉">🎉 파티 폭죽</option>
+                  <option value="👑">👑 오늘의 주인공</option>
+                  <option value="🌷">🌷 축하 꽃다발</option>
+                  <option value="🧸">🧸 포근한 테디베어</option>
+                  <option value="🥂">🥂 샴페인 건배</option>
+                  <option value="🎀">🎀 선물 리본</option>
+                </select>
+              </div>
             </div>
 
             <div class="form-row-2col">
               <div class="form-group">
-                <label class="form-label" for="createAdminPasswordInput">3. 관리 비밀번호 설정 (8자 이상)</label>
+                <label class="form-label" for="createAdminPasswordInput">4. 관리 비밀번호 설정 (8자 이상)</label>
                 <input
                   type="password"
                   id="createAdminPasswordInput"
@@ -397,7 +438,7 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label" for="createAdminPasswordConfirmInput">4. 관리 비밀번호 확인 (8자 이상)</label>
+                <label class="form-label" for="createAdminPasswordConfirmInput">5. 관리 비밀번호 확인 (8자 이상)</label>
                 <input
                   type="password"
                   id="createAdminPasswordConfirmInput"
@@ -415,21 +456,9 @@
               ⚠️ <strong>다른 사이트에서 사용 중인 아이디나 비밀번호를 사용하지 마세요. 관리 비밀번호는 복구하거나 초기화할 수 없습니다. 비밀번호를 잊어버리면 펀딩 관리 권한을 잃게 됩니다.</strong>
             </div>
 
-            <div class="form-row-2col" style="margin-top: 12px;">
+            <div class="form-row-1col" style="margin-top: 12px;">
               <div class="form-group">
-                <label class="form-label" for="createEmojiSelect">대표 아이콘</label>
-                <select id="createEmojiSelect" class="form-select">
-                  <option value="🎂">🎂 생일 케이크</option>
-                  <option value="👑">👑 오늘의 주인공</option>
-                  <option value="🌷">🌷 봄날의 튤립</option>
-                  <option value="🧸">🧸 포근한 테디베어</option>
-                  <option value="🥂">🥂 샴페인 건배</option>
-                  <option value="🎀">🎀 러블리 리본</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" for="createHeadlineInput">페이지 제목 (선택)</label>
+                <label class="form-label" for="createHeadlineInput" id="createHeadlineLabel">페이지 제목 (선택)</label>
                 <input
                   type="text"
                   id="createHeadlineInput"
@@ -480,7 +509,7 @@
                     accept="image/jpeg,image/png,image/webp"
                   />
                   <p class="form-help-text" style="margin-top: 4px; font-size: 12px; color: var(--text-muted);">
-                    생일 인트로 축하 화면 중앙 액자에 표시됩니다. 미등록 시 기본 축하 일러스트가 표시됩니다.
+                    인트로 축하 화면 중앙 액자에 표시됩니다. 미등록 시 텍스트 중심의 축하 애니메이션이 표시됩니다.
                   </p>
                 </div>
 
@@ -1442,36 +1471,64 @@
           <div class="form-error-msg" id="tossUrlErrorMsg" hidden style="margin-top: 8px; margin-bottom: 0;"></div>
         </div>
 
-        <!-- 2. Birthday Page Profile Settings -->
+        <!-- 2. Funding Page Profile Settings -->
         <div class="form-row-2col">
           <div class="form-group">
-            <label class="form-label" for="hostNameEditInput">생일 주인공 이름</label>
-            <input type="text" id="hostNameEditInput" class="form-input" maxlength="24" required />
+            <label class="form-label" for="profileEventTypeSelect">축하 이벤트 종류</label>
+            <select id="profileEventTypeSelect" class="form-select">
+              <option value="birthday">🎂 생일 (생일을 축하합니다!)</option>
+              <option value="graduation">🎓 졸업 (졸업을 축하합니다!)</option>
+              <option value="wedding">💍 결혼 (결혼을 축하합니다!)</option>
+              <option value="employment">💼 입사 (입사를 축하합니다!)</option>
+              <option value="admission">🎒 입학 (입학을 축하합니다!)</option>
+              <option value="custom">✨ 직접 설정</option>
+            </select>
           </div>
 
-          <div class="form-group">
-            <label class="form-label" for="hostBirthdayInput">생일 날짜</label>
-            <input type="date" id="hostBirthdayInput" class="form-input" required />
+          <div class="form-group" id="profileEventCustomBox" hidden>
+            <label class="form-label" for="profileEventCustomTextInput">직접 설정 축하 문구</label>
+            <input
+              type="text"
+              id="profileEventCustomTextInput"
+              class="form-input"
+              placeholder="예: 승진을 축하합니다!"
+              maxlength="35"
+            />
+          </div>
+
+          <div class="form-group" id="hostNameEditGroup">
+            <label class="form-label" for="hostNameEditInput" id="hostNameEditLabel">주인공 이름</label>
+            <input type="text" id="hostNameEditInput" class="form-input" maxlength="24" required />
           </div>
         </div>
 
         <div class="form-row-2col">
           <div class="form-group">
-            <label class="form-label" for="hostEmojiSelect">대표 아이콘</label>
-            <select id="hostEmojiSelect" class="form-select">
-              <option value="🎂">🎂 생일 케이크</option>
-              <option value="👑">👑 오늘의 주인공</option>
-              <option value="🌷">🌷 봄날의 튤립</option>
-              <option value="🧸">🧸 포근한 테디베어</option>
-              <option value="🥂">🥂 샴페인 건배</option>
-              <option value="🎀">🎀 러블리 리본</option>
-            </select>
+            <label class="form-label" for="hostBirthdayInput" id="hostBirthdayLabel">기념일 날짜</label>
+            <input type="date" id="hostBirthdayInput" class="form-input" required />
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="hostHeadlineInput">메인 타이틀</label>
-            <input type="text" id="hostHeadlineInput" class="form-input" maxlength="45" required />
+            <label class="form-label" for="hostEmojiSelect">대표 아이콘</label>
+            <select id="hostEmojiSelect" class="form-select">
+              <option value="🎂">🎂 생일 케이크</option>
+              <option value="🎓">🎓 학사모 / 졸업</option>
+              <option value="💍">💍 웨딩 링 / 결혼</option>
+              <option value="💼">💼 서류가방 / 입사</option>
+              <option value="🎒">🎒 책가방 / 입학</option>
+              <option value="🎉">🎉 파티 폭죽</option>
+              <option value="👑">👑 오늘의 주인공</option>
+              <option value="🌷">🌷 축하 꽃다발</option>
+              <option value="🧸">🧸 포근한 테디베어</option>
+              <option value="🥂">🥂 샴페인 건배</option>
+              <option value="🎀">🎀 선물 리본</option>
+            </select>
           </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="hostHeadlineInput">메인 타이틀</label>
+          <input type="text" id="hostHeadlineInput" class="form-input" maxlength="45" required />
         </div>
 
         <div class="form-group">
@@ -1493,7 +1550,11 @@
 
           <div class="intro-profile-preview-card">
             <div class="intro-preview-img-container" id="profileIntroPhotoThumbFrame">
-              <img id="profileIntroPhotoImg" class="intro-preview-thumbnail" alt="현재 인트로 사진" src="./intro-character.png" />
+              <img id="profileIntroPhotoImg" class="intro-preview-thumbnail" alt="현재 인트로 사진" src="" hidden />
+              <div id="profileIntroPhotoPlaceholder" class="intro-preview-placeholder">
+                <span class="placeholder-icon">📷</span>
+                <span class="placeholder-text">사진 미등록</span>
+              </div>
             </div>
 
             <div class="intro-profile-actions">
@@ -1517,7 +1578,7 @@
 
               <div class="intro-profile-buttons" style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
                 <button type="button" class="btn-subtle btn-xs" id="profileIntroPhotoDeleteBtn" style="color: #dc2626;">
-                  🗑️ 사진 삭제 (기본 이미지로 복원)
+                  🗑️ 사진 삭제
                 </button>
                 <span id="profileIntroPhotoStatusText" style="font-size: 12px; color: var(--text-muted);"></span>
               </div>

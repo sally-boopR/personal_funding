@@ -40,6 +40,8 @@ create table if not exists public.campaigns (
   intro_image_url text not null default '',
   intro_image_fit text not null default 'cover' check (intro_image_fit in ('cover', 'contain')),
   pending_delete_image_url text not null default '',
+  event_type text not null default 'birthday',
+  intro_message text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -164,9 +166,11 @@ drop function if exists public.owner_delete_contribution(text, text, text);
 drop function if exists public.owner_set_contribution_status(text, text, text, text);
 drop function if exists public.owner_delete_gift(text, text, text);
 drop function if exists public.owner_save_gift(text, text, text, text, integer, text, text, integer, text, text, text);
+drop function if exists public.owner_update_campaign(text, text, text, text, text, text, text, text, text, text, text, text, text, text);
 drop function if exists public.owner_update_campaign(text, text, text, text, text, text, text, text, text, text, text, text);
 drop function if exists public.logout_campaign_owner(text, text);
 drop function if exists public.login_campaign_owner(text, text);
+drop function if exists public.create_funding_campaign(text, text, text, text, text, text, text, text, text, text, text, text, text, text);
 drop function if exists public.create_funding_campaign(text, text, text, text, text, text, text, text, text, text, text, text);
 drop function if exists public.owner_check_session(text, text);
 drop function if exists public.verify_campaign_session(text, text);
@@ -332,7 +336,9 @@ create function public.create_funding_campaign(
   p_bank_account text default '',
   p_kakao_remit_url text default '',
   p_toss_remit_url text default '',
-  p_honeypot text default ''
+  p_honeypot text default '',
+  p_event_type text default 'birthday',
+  p_intro_message text default ''
 )
 returns jsonb
 language plpgsql
@@ -348,6 +354,9 @@ declare
   v_subtitle text;
   v_bio text;
   v_bday text;
+  v_event_type text := lower(trim(coalesce(p_event_type, 'birthday')));
+  v_intro_msg text := trim(coalesce(p_intro_message, ''));
+  v_event_label text;
   v_raw_token text;
 begin
   if coalesce(p_honeypot, '') <> '' then
@@ -361,6 +370,19 @@ begin
   if char_length(v_clean_pw) < 8 or char_length(v_clean_pw) > 64 then
     return jsonb_build_object('ok', false, 'message', '관리 비밀번호는 8자 이상 64자 이하로 설정해 주세요.');
   end if;
+
+  if v_event_type not in ('birthday', 'graduation', 'wedding', 'employment', 'admission', 'custom') then
+    v_event_type := 'birthday';
+  end if;
+
+  case v_event_type
+    when 'graduation' then v_event_label := '졸업';
+    when 'wedding' then v_event_label := '결혼';
+    when 'employment' then v_event_label := '입사';
+    when 'admission' then v_event_label := '입학';
+    when 'custom' then v_event_label := coalesce(nullif(v_intro_msg, ''), '축하');
+    else v_event_label := '생일';
+  end case;
 
   -- 대량 펀딩 생성 방지: 동일 클라이언트 10분당 5개, 전체 1분당 30개
   v_client_fp := public.get_client_fingerprint();
@@ -377,8 +399,8 @@ begin
   end loop;
 
   v_bday := coalesce(nullif(trim(coalesce(p_birthday_date, '')), ''), to_char(now(), 'YYYY-MM-DD'));
-  v_headline := coalesce(nullif(trim(coalesce(p_headline, '')), ''), v_clean_name || '의 생일 선물 펀딩');
-  v_subtitle := coalesce(nullif(trim(coalesce(p_subtitle, '')), ''), '소중한 마음을 모으는 생일 위시리스트');
+  v_headline := coalesce(nullif(trim(coalesce(p_headline, '')), ''), v_clean_name || '의 ' || v_event_label || ' 선물 펀딩');
+  v_subtitle := coalesce(nullif(trim(coalesce(p_subtitle, '')), ''), '소중한 마음을 모으는 ' || v_event_label || ' 위시리스트');
   v_bio := coalesce(
     nullif(trim(coalesce(p_bio, '')), ''),
     v_clean_name || '님이 받고 싶은 위시리스트에 원하는 금액만큼 마음을 보태주세요. 송금 후 「송금했어요」를 눌러주시면 입금 확인을 거쳐 달성률에 반영됩니다.'
@@ -386,11 +408,19 @@ begin
 
   insert into public.campaigns (
     id, host_name, emoji, birthday_date, headline, subtitle, bio,
-    bank_name, bank_account, kakao_remit_url, toss_remit_url
+    bank_name, bank_account, kakao_remit_url, toss_remit_url,
+    event_type, intro_message
   ) values (
     v_campaign_id,
     v_clean_name,
-    coalesce(nullif(trim(coalesce(p_emoji, '')), ''), '🎂'),
+    coalesce(nullif(trim(coalesce(p_emoji, '')), ''), case v_event_type
+      when 'graduation' then '🎓'
+      when 'wedding' then '💍'
+      when 'employment' then '💼'
+      when 'admission' then '🎒'
+      when 'custom' then '🎉'
+      else '🎂'
+    end),
     v_bday,
     v_headline,
     v_subtitle,
@@ -398,7 +428,9 @@ begin
     trim(coalesce(p_bank_name, '')),
     trim(coalesce(p_bank_account, '')),
     trim(coalesce(p_kakao_remit_url, '')),
-    trim(coalesce(p_toss_remit_url, ''))
+    trim(coalesce(p_toss_remit_url, '')),
+    v_event_type,
+    v_intro_msg
   );
 
   insert into public.campaign_secrets (campaign_id, password_hash)
@@ -702,7 +734,9 @@ create function public.owner_update_campaign(
   p_bank_name text,
   p_bank_account text,
   p_kakao_remit_url text,
-  p_toss_remit_url text
+  p_toss_remit_url text,
+  p_event_type text default 'birthday',
+  p_intro_message text default ''
 )
 returns boolean
 language plpgsql
@@ -712,6 +746,8 @@ as $$
 declare
   v_cid text := trim(coalesce(p_campaign_id, ''));
   v_name text := trim(coalesce(p_host_name, ''));
+  v_event_type text := lower(trim(coalesce(p_event_type, 'birthday')));
+  v_intro_msg text := trim(coalesce(p_intro_message, ''));
 begin
   if not public.verify_campaign_session(v_cid, p_session_token) then
     raise exception '관리자 세션이 만료되었거나 권한이 없습니다. 다시 관리 비밀번호로 로그인해 주세요.';
@@ -721,17 +757,23 @@ begin
     raise exception '주인공 이름은 1~30자로 입력해 주세요.';
   end if;
 
+  if v_event_type not in ('birthday', 'graduation', 'wedding', 'employment', 'admission', 'custom') then
+    v_event_type := 'birthday';
+  end if;
+
   update public.campaigns
   set host_name = v_name,
       emoji = coalesce(nullif(trim(coalesce(p_emoji, '')), ''), '🎂'),
       birthday_date = trim(coalesce(p_birthday_date, '')),
-      headline = coalesce(nullif(trim(coalesce(p_headline, '')), ''), v_name || '의 생일 선물 펀딩'),
-      subtitle = coalesce(nullif(trim(coalesce(p_subtitle, '')), ''), '소중한 마음을 모으는 생일 위시리스트'),
+      headline = coalesce(nullif(trim(coalesce(p_headline, '')), ''), v_name || '의 선물 펀딩'),
+      subtitle = coalesce(nullif(trim(coalesce(p_subtitle, '')), ''), '소중한 마음을 모으는 위시리스트'),
       bio = trim(coalesce(p_bio, '')),
       bank_name = trim(coalesce(p_bank_name, '')),
       bank_account = trim(coalesce(p_bank_account, '')),
       kakao_remit_url = trim(coalesce(p_kakao_remit_url, '')),
       toss_remit_url = trim(coalesce(p_toss_remit_url, '')),
+      event_type = v_event_type,
+      intro_message = v_intro_msg,
       updated_at = now()
   where id = v_cid;
 
@@ -1184,9 +1226,11 @@ revoke all on function public.get_client_fingerprint() from public, anon, authen
 revoke all on function public.check_rate_limit(text, text, integer, integer) from public, anon, authenticated;
 revoke all on function public.verify_campaign_session(text, text) from public, anon, authenticated;
 revoke all on function public.owner_check_session(text, text) from public, anon, authenticated;
+revoke all on function public.create_funding_campaign(text, text, text, text, text, text, text, text, text, text, text, text, text, text) from public, anon, authenticated;
 revoke all on function public.create_funding_campaign(text, text, text, text, text, text, text, text, text, text, text, text) from public, anon, authenticated;
 revoke all on function public.login_campaign_owner(text, text) from public, anon, authenticated;
 revoke all on function public.logout_campaign_owner(text, text) from public, anon, authenticated;
+revoke all on function public.owner_update_campaign(text, text, text, text, text, text, text, text, text, text, text, text, text, text) from public, anon, authenticated;
 revoke all on function public.owner_update_campaign(text, text, text, text, text, text, text, text, text, text, text, text) from public, anon, authenticated;
 revoke all on function public.owner_save_gift(text, text, text, text, integer, text, text, integer, text, text, text) from public, anon, authenticated;
 revoke all on function public.owner_delete_gift(text, text, text) from public, anon, authenticated;
@@ -1203,10 +1247,10 @@ revoke all on function public.owner_confirm_intro_deleted(text, text, text) from
 --     ※ get_client_fingerprint / check_rate_limit / verify_campaign_session 은
 --       내부 전용이므로 anon·authenticated 에 실행 권한을 부여하지 않습니다.
 grant execute on function public.owner_check_session(text, text) to anon, authenticated;
-grant execute on function public.create_funding_campaign(text, text, text, text, text, text, text, text, text, text, text, text) to anon, authenticated;
+grant execute on function public.create_funding_campaign(text, text, text, text, text, text, text, text, text, text, text, text, text, text) to anon, authenticated;
 grant execute on function public.login_campaign_owner(text, text) to anon, authenticated;
 grant execute on function public.logout_campaign_owner(text, text) to anon, authenticated;
-grant execute on function public.owner_update_campaign(text, text, text, text, text, text, text, text, text, text, text, text) to anon, authenticated;
+grant execute on function public.owner_update_campaign(text, text, text, text, text, text, text, text, text, text, text, text, text, text) to anon, authenticated;
 grant execute on function public.owner_save_gift(text, text, text, text, integer, text, text, integer, text, text, text) to anon, authenticated;
 grant execute on function public.owner_delete_gift(text, text, text) to anon, authenticated;
 grant execute on function public.owner_set_contribution_status(text, text, text, text) to anon, authenticated;

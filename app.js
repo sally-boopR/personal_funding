@@ -149,9 +149,91 @@
     return `${givenName}${particle}`;
   }
 
+  const EVENT_TYPE_CONFIG = {
+    birthday: {
+      key: 'birthday',
+      label: '생일',
+      emoji: '🎂',
+      enTitle: 'Happy Birthday!',
+      introPhrase: '생일을 축하합니다!',
+      ornament: '♡',
+      subCaption: '소중한 마음을 담은 생일 위시리스트가 열립니다',
+      defaultHeadline: (name) => `${name}의 생일 선물 펀딩`,
+      defaultSubtitle: '소중한 마음을 모으는 생일 위시리스트',
+      pledgeTitle: (name) => `${name}님에게 생일 선물 펀딩하기`,
+      pledgePlaceholder: (name) => `${name}님에게 따뜻한 생일 축하 인사를 남겨주세요!`
+    },
+    graduation: {
+      key: 'graduation',
+      label: '졸업',
+      emoji: '🎓',
+      enTitle: 'Happy Graduation!',
+      introPhrase: '졸업을 축하합니다!',
+      ornament: '🎓',
+      subCaption: '새로운 출발을 응원하는 선물 위시리스트가 열립니다',
+      defaultHeadline: (name) => `${name}의 졸업 축하 펀딩`,
+      defaultSubtitle: '새로운 시작을 응원하는 졸업 선물 위시리스트',
+      pledgeTitle: (name) => `${name}님에게 졸업 축하 펀딩하기`,
+      pledgePlaceholder: (name) => `${name}님에게 따뜻한 졸업 축하와 응원 메시지를 남겨주세요!`
+    },
+    wedding: {
+      key: 'wedding',
+      label: '결혼',
+      emoji: '💍',
+      enTitle: 'Happy Wedding!',
+      introPhrase: '결혼을 축하합니다!',
+      ornament: '💍',
+      subCaption: '축복하는 마음을 담은 결혼 선물 위시리스트가 열립니다',
+      defaultHeadline: (name) => `${name}의 결혼 축하 펀딩`,
+      defaultSubtitle: '새로운 시작을 축복하는 결혼 선물 위시리스트',
+      pledgeTitle: (name) => `${name}님에게 결혼 축하 펀딩하기`,
+      pledgePlaceholder: (name) => `${name}님에게 따뜻한 결혼 축하 메시지를 남겨주세요!`
+    },
+    employment: {
+      key: 'employment',
+      label: '입사',
+      emoji: '💼',
+      enTitle: 'Congratulations!',
+      introPhrase: '입사를 축하합니다!',
+      ornament: '🎉',
+      subCaption: '새로운 도약을 응원하는 선물 위시리스트가 열립니다',
+      defaultHeadline: (name) => `${name}의 입사 축하 펀딩`,
+      defaultSubtitle: '새로운 도전을 응원하는 입사 축하 위시리스트',
+      pledgeTitle: (name) => `${name}님에게 입사 축하 펀딩하기`,
+      pledgePlaceholder: (name) => `${name}님에게 따뜻한 입사 축하와 응원 메시지를 남겨주세요!`
+    },
+    admission: {
+      key: 'admission',
+      label: '입학',
+      emoji: '🎒',
+      enTitle: 'Congratulations!',
+      introPhrase: '입학을 축하합니다!',
+      ornament: '🎒',
+      subCaption: '설레는 시작을 응원하는 선물 위시리스트가 열립니다',
+      defaultHeadline: (name) => `${name}의 입학 축하 펀딩`,
+      defaultSubtitle: '설레는 새 학기 시작을 응원하는 선물 위시리스트',
+      pledgeTitle: (name) => `${name}님에게 입학 축하 펀딩하기`,
+      pledgePlaceholder: (name) => `${name}님에게 따뜻한 입학 축하와 응원 메시지를 남겨주세요!`
+    },
+    custom: {
+      key: 'custom',
+      label: '직접 설정',
+      emoji: '🎉',
+      enTitle: 'Congratulations!',
+      introPhrase: '축하합니다!',
+      ornament: '✨',
+      subCaption: '소중한 마음을 담은 선물 위시리스트가 열립니다',
+      defaultHeadline: (name) => `${name}의 선물 펀딩`,
+      defaultSubtitle: '소중한 마음을 모으는 위시리스트',
+      pledgeTitle: (name) => `${name}님에게 선물 펀딩하기`,
+      pledgePlaceholder: (name) => `${name}님에게 따뜻한 축하와 응원 메시지를 남겨주세요!`
+    }
+  };
+
   // Create default initial gifts for a new funding campaign
-  function createInitialGiftsForCampaign(campaignId, hostName) {
+  function createInitialGiftsForCampaign(campaignId, hostName, eventType = 'birthday') {
     const cleanName = String(hostName || '주인공').trim();
+    const cfg = EVENT_TYPE_CONFIG[eventType] || EVENT_TYPE_CONFIG.birthday;
     return [
       {
         id: `${campaignId}-gift-1`,
@@ -182,26 +264,27 @@
         campaignId,
         category: 'cake',
         priority: 3,
-        title: `${cleanName} 생일 축하 케이크 & 꽃다발`,
-        brand: '생일 기념 스페셜',
+        title: `${cleanName} ${cfg.label} 축하 선물 & 꽃다발`,
+        brand: `${cfg.label} 기념 스페셜`,
         goalAmount: 70000,
-        description: '생일을 더욱 빛내줄 케이크와 꽃다발 선물 모금입니다.',
+        description: `${cfg.label}를 더욱 빛내줄 축하 선물 모금입니다.`,
         imageUrl: '',
         imageFit: 'cover'
       }
     ];
   }
 
-  function createEmptyCampaignState(campaignId = '', hostName = '생일 주인공') {
+  function createEmptyCampaignState(campaignId = '', hostName = '생일 주인공', eventType = 'birthday') {
     const cleanName = String(hostName || '생일 주인공').trim();
+    const cfg = EVENT_TYPE_CONFIG[eventType] || EVENT_TYPE_CONFIG.birthday;
     return {
       campaign: {
         id: campaignId,
         hostName: cleanName,
-        emoji: '🎂',
+        emoji: cfg.emoji,
         birthdayDate: getTodayDateString(),
-        headline: `${cleanName}의 생일 선물 펀딩`,
-        subtitle: '소중한 마음을 모으는 생일 위시리스트',
+        headline: cfg.defaultHeadline(cleanName),
+        subtitle: cfg.defaultSubtitle,
         bio: `${cleanName}님이 받고 싶은 위시리스트에 원하는 금액만큼 마음을 보태주세요. 송금 후 「송금했어요」를 눌러주시면 입금 확인을 거쳐 달성률에 반영됩니다.`,
         kakaoRemitUrl: '',
         tossRemitUrl: '',
@@ -209,9 +292,11 @@
         bankAccount: '',
         introImageUrl: '',
         introImageFit: 'cover',
-        pendingDeleteImageUrl: ''
+        pendingDeleteImageUrl: '',
+        eventType: cfg.key,
+        introMessage: ''
       },
-      gifts: campaignId ? createInitialGiftsForCampaign(campaignId, cleanName) : [],
+      gifts: campaignId ? createInitialGiftsForCampaign(campaignId, cleanName, eventType) : [],
       contributions: []
     };
   }
@@ -696,6 +781,7 @@
     addRecentFundingRecord(currentCampaignId, state.campaign.hostName, state.campaign.emoji);
     updateViewModeUI();
     renderApp();
+    await prepareAndBindIntro();
     startBirthdayIntroAnimation(forcePlayIntro);
   }
 
@@ -836,7 +922,9 @@
         tossRemitUrl: c.toss_remit_url || '',
         introImageUrl: c.intro_image_url || '',
         introImageFit: c.intro_image_fit === 'contain' ? 'contain' : 'cover',
-        pendingDeleteImageUrl: c.pending_delete_image_url || ''
+        pendingDeleteImageUrl: c.pending_delete_image_url || '',
+        eventType: c.event_type || 'birthday',
+        introMessage: c.intro_message || ''
       };
 
       if (Array.isArray(giftsRes.data)) {
@@ -1053,7 +1141,7 @@
     }
 
     if (!hostName || hostName.length > 24) {
-      errEl.textContent = '생일 주인공 이름을 1~24자로 입력해 주세요.';
+      errEl.textContent = '주인공 이름을 1~24자로 입력해 주세요.';
       errEl.hidden = false;
       document.getElementById('createHostNameInput').focus();
       return;
@@ -1094,19 +1182,26 @@
       return;
     }
 
-    const headline = customHeadline || `${hostName}의 생일 선물 펀딩`;
-    const subtitle = '소중한 마음을 모으는 생일 위시리스트';
+    const eventTypeSelect = document.getElementById('createEventTypeSelect');
+    const eventType = (eventTypeSelect && eventTypeSelect.value) || 'birthday';
+    const customMsgInput = document.getElementById('createEventCustomTextInput');
+    const customMsg = (customMsgInput && customMsgInput.value.trim()) || '';
+    const eventCfg = EVENT_TYPE_CONFIG[eventType] || EVENT_TYPE_CONFIG.birthday;
+    const eventLabel = eventType === 'custom' ? (customMsg || '축하') : eventCfg.label;
+
+    const headline = customHeadline || eventCfg.defaultHeadline(hostName);
+    const subtitle = eventCfg.defaultSubtitle;
     const bio = `${hostName}님이 받고 싶은 위시리스트에 원하는 금액만큼 마음을 보태주세요. 송금 후 「송금했어요」를 눌러주시면 입금 확인을 거쳐 달성률에 반영됩니다.`;
 
     submitBtn.disabled = true;
-    submitBtn.textContent = '⏳ 나만의 생일 펀딩 생성 중...';
+    submitBtn.textContent = '⏳ 나만의 펀딩 생성 중...';
 
     try {
       let issuedCampaignId = '';
       let issuedToken = '';
 
       if (isCloudConnected && supabaseClient) {
-        const { data, error } = await supabaseClient.rpc('create_funding_campaign', {
+        let rpcRes = await supabaseClient.rpc('create_funding_campaign', {
           p_host_name: hostName,
           p_password: password,
           p_birthday_date: birthdayDate,
@@ -1118,8 +1213,32 @@
           p_bank_account: bankAccount,
           p_kakao_remit_url: rawKakao ? getValidHttpUrl(rawKakao) : '',
           p_toss_remit_url: rawToss ? getValidHttpUrl(rawToss) : '',
-          p_honeypot: honeypot
+          p_honeypot: honeypot,
+          p_event_type: eventType,
+          p_intro_message: customMsg
         });
+
+        // Pre-migration fallback: if 14-parameter function not found yet, call 12-param version
+        if (rpcRes.error && /could not find the function/i.test(rpcRes.error.message || '')) {
+          console.warn('[CreateCampaign] Falling back to 12-param create_funding_campaign');
+          rpcRes = await supabaseClient.rpc('create_funding_campaign', {
+            p_host_name: hostName,
+            p_password: password,
+            p_birthday_date: birthdayDate,
+            p_emoji: emoji,
+            p_headline: headline,
+            p_subtitle: subtitle,
+            p_bio: bio,
+            p_bank_name: bankName,
+            p_bank_account: bankAccount,
+            p_kakao_remit_url: rawKakao ? getValidHttpUrl(rawKakao) : '',
+            p_toss_remit_url: rawToss ? getValidHttpUrl(rawToss) : '',
+            p_honeypot: honeypot
+          });
+        }
+
+        const data = rpcRes.data;
+        const error = rpcRes.error;
 
         if (error) {
           throw new Error(error.message || '펀딩 생성 중 오류가 발생했습니다.');
@@ -1150,9 +1269,11 @@
             bankName,
             bankAccount,
             kakaoRemitUrl: rawKakao ? getValidHttpUrl(rawKakao) : '',
-            tossRemitUrl: rawToss ? getValidHttpUrl(rawToss) : ''
+            tossRemitUrl: rawToss ? getValidHttpUrl(rawToss) : '',
+            eventType,
+            introMessage: customMsg
           },
-          gifts: createInitialGiftsForCampaign(issuedCampaignId, hostName),
+          gifts: createInitialGiftsForCampaign(issuedCampaignId, hostName, eventType),
           contributions: [],
           ownerPwSalt: salt,
           ownerPwHash: pwHash,
@@ -1215,7 +1336,7 @@
       if (previewWrap) previewWrap.hidden = true;
 
       const shareUrl = buildCampaignShareUrl(issuedCampaignId);
-      document.getElementById('createdSuccessTitle').textContent = `${hostName}님의 생일 펀딩이 생성되었습니다!`;
+      document.getElementById('createdSuccessTitle').textContent = `${hostName}님의 ${eventLabel} 펀딩이 생성되었습니다!`;
       document.getElementById('issuedFundingIdText').textContent = issuedCampaignId;
       document.getElementById('issuedShareUrlInput').value = shareUrl;
 
@@ -1228,13 +1349,13 @@
 
       renderRecentFundingsList();
       launchConfetti();
-      showToast('🎉 생일 펀딩이 생성되었습니다! 공유 URL과 관리 비밀번호를 꼭 보관해 주세요.');
+      showToast(`🎉 ${eventLabel} 펀딩이 생성되었습니다! 공유 URL과 관리 비밀번호를 꼭 보관해 주세요.`);
     } catch (err) {
       errEl.textContent = err.message || '펀딩 생성에 실패했습니다.';
       errEl.hidden = false;
     } finally {
       submitBtn.disabled = false;
-      submitBtn.textContent = '✨ 내 생일 펀딩 만들기 & 고유 URL 발급받기';
+      submitBtn.textContent = '✨ 내 펀딩 만들기 & 고유 URL 발급받기';
     }
   }
 
@@ -1478,43 +1599,107 @@
     return '';
   }
 
-  function bindIntroPhoto() {
+  async function prepareAndBindIntro() {
+    const frameEl = document.getElementById('introPhotoFrame');
     const imgEl = document.getElementById('introPhotoImg');
-    if (!imgEl) return;
-    const defaultSrc = imgEl.dataset.defaultSrc || './intro-character.png';
+    const stage = document.getElementById('introCenterStage');
     const rawPath = (state.campaign && state.campaign.introImageUrl) || '';
     const fitMode = (state.campaign && state.campaign.introImageFit === 'contain') ? 'contain' : 'cover';
 
-    if (rawPath) {
-      const publicUrl = getIntroPhotoPublicUrl(rawPath);
-      if (publicUrl) {
-        imgEl.src = publicUrl;
-        imgEl.classList.add('is-custom-photo');
-        imgEl.classList.remove('fit-cover', 'fit-contain');
-        imgEl.classList.add(`fit-${fitMode}`);
-        imgEl.onerror = () => {
-          imgEl.onerror = null;
-          imgEl.src = defaultSrc;
-          imgEl.classList.remove('is-custom-photo', 'fit-cover', 'fit-contain');
-        };
-        return;
-      }
+    // Requirements 4 & 5: Initially keep photo frame hidden and img cleared
+    if (imgEl) {
+      imgEl.src = '';
+      imgEl.classList.remove('is-custom-photo', 'fit-cover', 'fit-contain');
+      imgEl.onerror = null;
+    }
+    if (frameEl) {
+      frameEl.hidden = true;
     }
 
-    imgEl.src = defaultSrc;
-    imgEl.classList.remove('is-custom-photo', 'fit-cover', 'fit-contain');
+    if (rawPath) {
+      const publicUrl = getIntroPhotoPublicUrl(rawPath);
+      if (publicUrl && imgEl && frameEl) {
+        // Requirement 6: Preload and decode custom image completely before starting intro animation
+        let loaded = false;
+        try {
+          const pre = new Image();
+          pre.src = publicUrl;
+          await Promise.race([
+            pre.decode ? pre.decode().then(() => { loaded = true; }) : new Promise((resolve) => {
+              pre.onload = () => { loaded = true; resolve(); };
+              pre.onerror = () => { loaded = false; resolve(); };
+            }),
+            new Promise((resolve) => setTimeout(resolve, 3500))
+          ]);
+        } catch (e) {
+          loaded = false;
+        }
+
+        if (loaded) {
+          imgEl.src = publicUrl;
+          imgEl.classList.add('is-custom-photo', `fit-${fitMode}`);
+          frameEl.hidden = false; // Only show frame once photo is loaded
+          imgEl.onerror = () => {
+            imgEl.onerror = null;
+            imgEl.src = '';
+            frameEl.hidden = true; // Never show alternative image
+          };
+        } else {
+          // Photo loading failed or timed out: keep frame hidden, do not show any alternative image
+          imgEl.src = '';
+          frameEl.hidden = true;
+        }
+      }
+    } else {
+      // No custom image: keep frame hidden, pure typography celebration animation
+      if (frameEl) frameEl.hidden = true;
+      if (imgEl) imgEl.src = '';
+    }
+
+    // Bind event celebration phrases
+    bindIntroEventTitles();
+
+    // Release preparing state so animation starts cleanly
+    if (stage) {
+      stage.classList.remove('is-preparing');
+    }
+  }
+
+  function bindIntroEventTitles() {
+    const rawType = (state.campaign && state.campaign.eventType) || 'birthday';
+    const cfg = EVENT_TYPE_CONFIG[rawType] || EVENT_TYPE_CONFIG.birthday;
+    const hostName = (state.campaign && state.campaign.hostName) || '주인공';
+    const customMsg = ((state.campaign && state.campaign.introMessage) || '').trim();
+    const vocative = formatVocativeName(hostName);
+
+    const phrase = (rawType === 'custom' && customMsg) ? customMsg : cfg.introPhrase;
+
+    const introDateTag = document.getElementById('introDateTag');
+    const introEnTitle = document.getElementById('introEnTitle');
+    const introKrTitle = document.getElementById('introKrTitle');
+    const introSubCaption = document.getElementById('introSubCaption');
+    const introOrnamentIcon = document.getElementById('introOrnamentIcon');
+
+    if (introDateTag) {
+      introDateTag.textContent = `PERSONAL_FUNDING · FOR ${hostName.toUpperCase()}`;
+    }
+    if (introEnTitle) {
+      introEnTitle.textContent = cfg.enTitle;
+      introEnTitle.setAttribute('aria-label', cfg.enTitle);
+    }
+    if (introOrnamentIcon) {
+      introOrnamentIcon.textContent = cfg.ornament;
+    }
+    if (introKrTitle) {
+      introKrTitle.innerHTML = `${escapeHtml(vocative)}, ${escapeHtml(phrase)} <span class="intro-heart-beat" aria-hidden="true">${cfg.ornament}</span>`;
+    }
+    if (introSubCaption) {
+      introSubCaption.textContent = cfg.subCaption;
+    }
   }
 
   function bindIntroPhotoAndLabels() {
-    bindIntroPhoto();
-    const hostName = (state.campaign && state.campaign.hostName) || '생일 주인공';
-    const vocative = formatVocativeName(hostName);
-    const introDateTag = document.getElementById('introDateTag');
-    const introKrTitle = document.getElementById('introKrTitle');
-    if (introDateTag) introDateTag.textContent = `PERSONAL_FUNDING · FOR ${hostName.toUpperCase()}`;
-    if (introKrTitle) {
-      introKrTitle.innerHTML = `${escapeHtml(vocative)}, 생일 축하해 <span class="intro-heart-beat" aria-hidden="true">♡</span>`;
-    }
+    prepareAndBindIntro();
   }
 
   function renderAvatarMediaHtml(avatarUrl, senderName) {
@@ -1624,20 +1809,22 @@
 
   // Dynamically bind current campaign's hostName across Intro, Header, Hero, Wishlist, and Modals
   function renderDynamicHostLabels() {
-    const hostName = state.campaign.hostName || '생일 주인공';
+    const hostName = state.campaign.hostName || '주인공';
+    const rawType = state.campaign.eventType || 'birthday';
+    const cfg = EVENT_TYPE_CONFIG[rawType] || EVENT_TYPE_CONFIG.birthday;
     const vocative = formatVocativeName(hostName);
     const withParticle = hasFinalConsonant(hostName) ? '이와의' : '와의';
 
-    document.title = `${hostName} 생일 선물 위시리스트 & 펀딩 | personal_funding`;
+    document.title = `${hostName} ${cfg.label} 선물 위시리스트 & 펀딩 | personal_funding`;
 
-    // Intro Photo & Labels Binding (Decoupled from Visual Animation)
-    bindIntroPhotoAndLabels();
+    // Intro Event Titles Binding
+    bindIntroEventTitles();
 
     // Header & Footer Brand
     document.getElementById('topBrandTitle').textContent = `FOR ${hostName}`;
-    document.getElementById('topBrandSub').textContent = `personal_funding · ${hostName} 생일 펀딩`;
-    document.getElementById('mobileHomeNavLink').textContent = `🎂 ${hostName} 생일 홈`;
-    document.getElementById('footerBrandTitle').textContent = `personal_funding · FOR ${hostName} — ${hostName} 생일 선물 위시리스트`;
+    document.getElementById('topBrandSub').textContent = `personal_funding · ${hostName} ${cfg.label} 펀딩`;
+    document.getElementById('mobileHomeNavLink').textContent = `${cfg.emoji} ${hostName} 홈`;
+    document.getElementById('footerBrandTitle').textContent = `personal_funding · FOR ${hostName} — ${hostName} ${cfg.label} 선물 위시리스트`;
 
     // Hero & Wishlist Titles
     document.getElementById('heroExclusivePill').textContent = `FOR ${hostName}`;
@@ -1647,11 +1834,11 @@
 
     // Pledge Modal Labels
     document.getElementById('pledgeModalEyebrow').textContent = `GIFT FUNDING FOR ${hostName}`;
-    document.getElementById('pledgeModalTitle').textContent = `${hostName}님에게 생일 선물 펀딩하기`;
+    document.getElementById('pledgeModalTitle').textContent = cfg.pledgeTitle(hostName);
     document.getElementById('pledgeModalSubtitle').textContent =
       `선물과 금액, 프로필 사진 및 축하 메시지를 입력한 뒤 ${hostName}님에게 송금해 주세요.`;
     document.getElementById('pledgeRelationLabel').textContent = `${hostName}${withParticle} 관계`;
-    document.getElementById('pledgeMessageInput').placeholder = `${hostName}님에게 따뜻한 생일 축하 인사를 남겨주세요!`;
+    document.getElementById('pledgeMessageInput').placeholder = cfg.pledgePlaceholder(hostName);
     document.getElementById('remitRecipientName').textContent = hostName;
     document.getElementById('guideRecipientName').textContent = hostName;
     document.getElementById('bankHolderDisplay').textContent = hostName;
@@ -1736,12 +1923,13 @@
     const approvedList = state.contributions.filter((c) => c.status === 'approved');
     const recentApproved = approvedList.slice(-4).reverse();
 
+    const eventCfg = EVENT_TYPE_CONFIG[campaign.eventType] || EVENT_TYPE_CONFIG.birthday;
     if (approvedList.length === 0) {
       avatarStack.innerHTML = '';
       if (metrics.pendingCount > 0) {
         summaryText.innerHTML = `현재 <strong>${metrics.pendingCount}건</strong>의 송금이 입금 확인을 기다리고 있어요!`;
       } else {
-        summaryText.textContent = `${campaign.hostName}님에게 첫 번째로 생일 축하 마음을 전해보세요!`;
+        summaryText.textContent = `${campaign.hostName}님에게 첫 번째로 ${eventCfg.label} 축하 마음을 전해보세요!`;
       }
     } else {
       avatarStack.innerHTML = recentApproved
@@ -1751,7 +1939,7 @@
         .join('');
       const latest = recentApproved[0];
       if (approvedList.length === 1) {
-        summaryText.innerHTML = `<strong>${escapeHtml(latest.senderName)}</strong>님의 생일 펀딩 입금이 확인되었어요!`;
+        summaryText.innerHTML = `<strong>${escapeHtml(latest.senderName)}</strong>님의 ${eventCfg.label} 펀딩 입금이 확인되었어요!`;
       } else {
         summaryText.innerHTML = `최근 <strong>${escapeHtml(latest.senderName)}</strong>님 외 ${approvedList.length - 1}명이 마음을 모았어요!`;
       }
@@ -2899,6 +3087,19 @@
     document.getElementById('hostSubtitleInput').value = campaign.subtitle || '';
     document.getElementById('hostBioInput').value = campaign.bio || '';
 
+    const profileEventTypeSel = document.getElementById('profileEventTypeSelect');
+    const profileEventCustomInp = document.getElementById('profileEventCustomTextInput');
+    const profileEventCustomBox = document.getElementById('profileEventCustomBox');
+    if (profileEventTypeSel) {
+      profileEventTypeSel.value = campaign.eventType || 'birthday';
+    }
+    if (profileEventCustomInp) {
+      profileEventCustomInp.value = campaign.introMessage || '';
+    }
+    if (profileEventCustomBox) {
+      profileEventCustomBox.hidden = (!profileEventTypeSel || profileEventTypeSel.value !== 'custom');
+    }
+
     // Reset intro photo management state in owner settings
     profileSelectedIntroFile = null;
     profileIntroPhotoMarkedForDelete = false;
@@ -2910,6 +3111,7 @@
     if (fitSelect) fitSelect.value = campaign.introImageFit === 'contain' ? 'contain' : 'cover';
 
     const photoThumb = document.getElementById('profileIntroPhotoImg');
+    const photoPlaceholder = document.getElementById('profileIntroPhotoPlaceholder');
     const deleteBtn = document.getElementById('profileIntroPhotoDeleteBtn');
     const statusText = document.getElementById('profileIntroPhotoStatusText');
     if (statusText) statusText.textContent = '';
@@ -2918,10 +3120,13 @@
       if (campaign.introImageUrl) {
         photoThumb.src = getIntroPhotoPublicUrl(campaign.introImageUrl);
         photoThumb.className = `intro-preview-thumbnail fit-${campaign.introImageFit || 'cover'}`;
+        photoThumb.hidden = false;
+        if (photoPlaceholder) photoPlaceholder.hidden = true;
         if (deleteBtn) deleteBtn.hidden = false;
       } else {
-        photoThumb.src = './intro-character.png';
-        photoThumb.className = 'intro-preview-thumbnail fit-cover';
+        photoThumb.src = '';
+        photoThumb.hidden = true;
+        if (photoPlaceholder) photoPlaceholder.hidden = false;
         if (deleteBtn) deleteBtn.hidden = true;
       }
     }
@@ -2958,16 +3163,22 @@
     const bankAccount = document.getElementById('bankAccountInput').value.trim();
     const rawKakaoUrl = document.getElementById('kakaoRemitUrlInput').value.trim();
     const rawTossUrl = document.getElementById('tossRemitUrlInput').value.trim();
+    const eventTypeSelect = document.getElementById('profileEventTypeSelect');
+    const eventType = (eventTypeSelect && eventTypeSelect.value) || 'birthday';
+    const customMsgInput = document.getElementById('profileEventCustomTextInput');
+    const customMsg = (customMsgInput && customMsgInput.value.trim()) || '';
+    const eventCfg = EVENT_TYPE_CONFIG[eventType] || EVENT_TYPE_CONFIG.birthday;
+
     const hostName = document.getElementById('hostNameEditInput').value.trim();
     const emoji = document.getElementById('hostEmojiSelect').value;
     const birthdayDate = document.getElementById('hostBirthdayInput').value;
-    const headline = document.getElementById('hostHeadlineInput').value.trim() || `${hostName}의 생일 선물 펀딩`;
-    const subtitle = document.getElementById('hostSubtitleInput').value.trim() || '소중한 마음을 모으는 생일 위시리스트';
+    const headline = document.getElementById('hostHeadlineInput').value.trim() || eventCfg.defaultHeadline(hostName);
+    const subtitle = document.getElementById('hostSubtitleInput').value.trim() || eventCfg.defaultSubtitle;
     const bio = document.getElementById('hostBioInput').value.trim();
     const urlError = document.getElementById('tossUrlErrorMsg');
 
     if (!hostName) {
-      urlError.textContent = '생일 주인공 이름을 입력해 주세요.';
+      urlError.textContent = '주인공 이름을 입력해 주세요.';
       urlError.hidden = false;
       return;
     }
@@ -2991,7 +3202,7 @@
 
     if (isCloudConnected && supabaseClient) {
       const token = getStoredOwnerSessionToken(currentCampaignId);
-      const { error } = await supabaseClient.rpc('owner_update_campaign', {
+      let updateRes = await supabaseClient.rpc('owner_update_campaign', {
         p_campaign_id: currentCampaignId,
         p_session_token: token,
         p_host_name: hostName,
@@ -3003,11 +3214,32 @@
         p_bank_name: bankName,
         p_bank_account: bankAccount,
         p_kakao_remit_url: cleanKakao,
-        p_toss_remit_url: cleanToss
+        p_toss_remit_url: cleanToss,
+        p_event_type: eventType,
+        p_intro_message: customMsg
       });
 
-      if (error) {
-        urlError.textContent = `설정 저장 실패: ${error.message}`;
+      // Pre-migration fallback: if 14-parameter function not found yet, call 12-param version
+      if (updateRes.error && /could not find the function/i.test(updateRes.error.message || '')) {
+        console.warn('[ProfileUpdate] Falling back to 12-param owner_update_campaign');
+        updateRes = await supabaseClient.rpc('owner_update_campaign', {
+          p_campaign_id: currentCampaignId,
+          p_session_token: token,
+          p_host_name: hostName,
+          p_emoji: emoji,
+          p_birthday_date: birthdayDate,
+          p_headline: headline,
+          p_subtitle: subtitle,
+          p_bio: bio,
+          p_bank_name: bankName,
+          p_bank_account: bankAccount,
+          p_kakao_remit_url: cleanKakao,
+          p_toss_remit_url: cleanToss
+        });
+      }
+
+      if (updateRes.error) {
+        urlError.textContent = `설정 저장 실패: ${updateRes.error.message}`;
         urlError.hidden = false;
         return;
       }
@@ -3145,6 +3377,8 @@
         bankAccount,
         kakaoRemitUrl: cleanKakao,
         tossRemitUrl: cleanToss,
+        eventType,
+        introMessage: customMsg,
         introImageUrl: finalIntroUrl,
         introImageFit: finalIntroUrl ? introFitVal : 'cover'
       };
@@ -3482,18 +3716,18 @@
     docEl.classList.remove('intro-skipped', 'intro-fading-out');
     docEl.classList.add('intro-active');
 
-    if (forceReplay) {
-      const stage = overlay.querySelector('.intro-center-stage');
-      if (stage) {
-        const clone = stage.cloneNode(true);
-        stage.parentNode.replaceChild(clone, stage);
-      }
-      renderDynamicHostLabels();
-      if (prefersReducedMotion) {
-        const tid = setTimeout(() => finishBirthdayIntro(), 1200);
-        introTimers.push(tid);
-        return;
-      }
+    const stage = overlay.querySelector('.intro-center-stage');
+    if (stage) {
+      stage.classList.remove('is-preparing');
+      const clone = stage.cloneNode(true);
+      stage.parentNode.replaceChild(clone, stage);
+    }
+    bindIntroEventTitles();
+
+    if (prefersReducedMotion) {
+      const tid = setTimeout(() => finishBirthdayIntro(), 1200);
+      introTimers.push(tid);
+      return;
     }
 
     const ctx = canvas.getContext('2d');
@@ -3938,6 +4172,40 @@
 
     // Create Funding Form & Issued URL Box Events
     document.getElementById('createFundingForm').addEventListener('submit', handleCreateFundingSubmit);
+
+    const createEventTypeSel = document.getElementById('createEventTypeSelect');
+    const createEventCustomBox = document.getElementById('createEventCustomBox');
+    const createEmojiSel = document.getElementById('createEmojiSelect');
+    const createHeadlineInp = document.getElementById('createHeadlineInput');
+    const createHostNameInp = document.getElementById('createHostNameInput');
+
+    if (createEventTypeSel) {
+      createEventTypeSel.addEventListener('change', () => {
+        const val = createEventTypeSel.value;
+        if (createEventCustomBox) {
+          createEventCustomBox.hidden = val !== 'custom';
+        }
+        const cfg = EVENT_TYPE_CONFIG[val] || EVENT_TYPE_CONFIG.birthday;
+        if (createEmojiSel) {
+          createEmojiSel.value = cfg.emoji;
+        }
+        const currentName = (createHostNameInp && createHostNameInp.value.trim()) || '{이름}';
+        if (createHeadlineInp) {
+          createHeadlineInp.placeholder = `미입력 시 '${cfg.defaultHeadline(currentName)}'`;
+        }
+      });
+    }
+
+    if (createHostNameInp) {
+      createHostNameInp.addEventListener('input', () => {
+        const selVal = (createEventTypeSel && createEventTypeSel.value) || 'birthday';
+        const cfg = EVENT_TYPE_CONFIG[selVal] || EVENT_TYPE_CONFIG.birthday;
+        const currentName = createHostNameInp.value.trim() || '{이름}';
+        if (createHeadlineInp) {
+          createHeadlineInp.placeholder = `미입력 시 '${cfg.defaultHeadline(currentName)}'`;
+        }
+      });
+    }
 
     document.getElementById('copyIssuedUrlBtn').addEventListener('click', () => {
       const urlVal = document.getElementById('issuedShareUrlInput').value;
@@ -4481,6 +4749,30 @@
     document.getElementById('cancelProfileModalBtn').addEventListener('click', closeProfileModal);
     document.getElementById('profileForm').addEventListener('submit', handleProfileFormSubmit);
 
+    // Profile Event Type selector change
+    const profileEventTypeSel = document.getElementById('profileEventTypeSelect');
+    const profileEventCustomBox = document.getElementById('profileEventCustomBox');
+    const hostEmojiSelect = document.getElementById('hostEmojiSelect');
+    const hostHeadlineInput = document.getElementById('hostHeadlineInput');
+    const hostNameEditInput = document.getElementById('hostNameEditInput');
+
+    if (profileEventTypeSel) {
+      profileEventTypeSel.addEventListener('change', () => {
+        const val = profileEventTypeSel.value;
+        if (profileEventCustomBox) {
+          profileEventCustomBox.hidden = val !== 'custom';
+        }
+        const cfg = EVENT_TYPE_CONFIG[val] || EVENT_TYPE_CONFIG.birthday;
+        if (hostEmojiSelect) {
+          hostEmojiSelect.value = cfg.emoji;
+        }
+        const currentName = (hostNameEditInput && hostNameEditInput.value.trim()) || '주인공';
+        if (hostHeadlineInput && !hostHeadlineInput.value.trim()) {
+          hostHeadlineInput.placeholder = `미입력 시 '${cfg.defaultHeadline(currentName)}'`;
+        }
+      });
+    }
+
     // Owner Settings Intro Photo Events
     const profilePhotoInput = document.getElementById('profileIntroPhotoInput');
     const profilePhotoImg = document.getElementById('profileIntroPhotoImg');
@@ -4505,7 +4797,10 @@
           if (profilePhotoImg) {
             profilePhotoImg.src = ev.target.result;
             profilePhotoImg.className = `intro-preview-thumbnail fit-${(profileFitSelect && profileFitSelect.value === 'contain') ? 'contain' : 'cover'}`;
+            profilePhotoImg.hidden = false;
           }
+          const photoPlaceholder = document.getElementById('profileIntroPhotoPlaceholder');
+          if (photoPlaceholder) photoPlaceholder.hidden = true;
           if (profileDeleteBtn) profileDeleteBtn.hidden = false;
           if (profileStatusText) profileStatusText.textContent = '새 사진 선택됨 (저장 시 적용)';
         };
@@ -4525,9 +4820,12 @@
         profileIntroPhotoMarkedForDelete = true;
         if (profilePhotoInput) profilePhotoInput.value = '';
         if (profilePhotoImg) {
-          profilePhotoImg.src = './intro-character.png';
-          profilePhotoImg.className = 'intro-preview-thumbnail fit-cover';
+          profilePhotoImg.src = '';
+          profilePhotoImg.hidden = true;
         }
+        const photoPlaceholder = document.getElementById('profileIntroPhotoPlaceholder');
+        if (photoPlaceholder) photoPlaceholder.hidden = false;
+        profileDeleteBtn.hidden = true;
         if (profileStatusText) profileStatusText.textContent = '저장 시 사진이 삭제됩니다';
       });
     }
@@ -4615,16 +4913,18 @@
 
     const replayIntroBtn = document.getElementById('replayIntroBtn');
     if (replayIntroBtn) {
-      replayIntroBtn.addEventListener('click', () => {
+      replayIntroBtn.addEventListener('click', async () => {
         document.getElementById('dataDropdownMenu').hidden = true;
+        await prepareAndBindIntro();
         startBirthdayIntroAnimation(true);
       });
     }
 
     const mobileReplayIntroBtn = document.getElementById('mobileReplayIntroBtn');
     if (mobileReplayIntroBtn) {
-      mobileReplayIntroBtn.addEventListener('click', () => {
+      mobileReplayIntroBtn.addEventListener('click', async () => {
         closeMobileDrawer();
+        await prepareAndBindIntro();
         startBirthdayIntroAnimation(true);
       });
     }
