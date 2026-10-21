@@ -488,6 +488,23 @@
     return null;
   }
 
+  function normalizeWebUrl(rawUrl) {
+    let trimmed = String(rawUrl || '').trim();
+    if (!trimmed) return '';
+    if (!/^https?:\/\//i.test(trimmed)) {
+      trimmed = 'https://' + trimmed;
+    }
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        return parsed.href;
+      }
+    } catch (e) {
+      return '';
+    }
+    return '';
+  }
+
   // Supabase Project URL 정규화:
   // 사용자가 Data API 주소(예: https://xxx.supabase.co/rest/v1/)를 입력하더라도
   // supabase.createClient()가 내부적으로 '/rest/v1'과 '/rpc/...'를 붙이므로
@@ -938,7 +955,8 @@
           goalAmount: Number(g.goal_amount) || 100000,
           description: g.description || '',
           imageUrl: g.image_url || '',
-          imageFit: g.image_fit === 'contain' ? 'contain' : 'cover'
+          imageFit: g.image_fit === 'contain' ? 'contain' : 'cover',
+          productUrl: g.product_url || ''
         }));
       }
 
@@ -2015,6 +2033,20 @@
           ? `🎉 달성 완료 · 추가 펀딩하기`
           : `💝 이 선물 펀딩 참여하기`;
 
+        const validProductUrl = getValidHttpUrl(gift.productUrl);
+        const productLinkHtml = validProductUrl
+          ? `
+            <a href="${escapeHtml(validProductUrl)}" target="_blank" rel="noopener noreferrer" class="btn-product-link" aria-label="${escapeHtml(gift.title)} 상품 보러가기">
+              <span>🛍️ 상품 보러가기</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+            </a>
+          `
+          : '';
+
         const hostActionsHtml = isAdminAuthenticated
           ? `
             <div class="gift-host-actions">
@@ -2062,6 +2094,7 @@
               </div>
 
               <div class="gift-card-footer">
+                ${productLinkHtml}
                 <button type="button" class="btn-pledge-card" data-action="open-pledge" data-gift-id="${escapeHtml(gift.id)}">
                   ${ctaLabel}
                 </button>
@@ -2904,6 +2937,7 @@
     const goalInput = document.getElementById('giftGoalInput');
     const descInput = document.getElementById('giftDescInput');
     const urlInput = document.getElementById('giftImageUrlInput');
+    const productUrlInput = document.getElementById('giftProductUrlInput');
     const fileInput = document.getElementById('giftPhotoFileInput');
     const errEl = document.getElementById('giftFormErrorMsg');
 
@@ -2923,6 +2957,7 @@
         brandInput.value = existing.brand || '';
         goalInput.value = existing.goalAmount;
         descInput.value = existing.description || '';
+        if (productUrlInput) productUrlInput.value = existing.productUrl || '';
 
         const fit = existing.imageFit || 'cover';
         setSelectedImageFit(fit);
@@ -2946,6 +2981,7 @@
       goalInput.value = 150000;
       descInput.value = '';
       urlInput.value = '';
+      if (productUrlInput) productUrlInput.value = '';
       setSelectedImageFit('cover');
       updateEditorPhotoPreview('', 'cover');
     }
@@ -2972,6 +3008,7 @@
     const goalAmount = Math.max(1000, Math.round(Number(document.getElementById('giftGoalInput').value) || 100000));
     const description = document.getElementById('giftDescInput').value.trim() || `${state.campaign.hostName}의 생일 위시리스트 선물입니다.`;
     const manualUrl = document.getElementById('giftImageUrlInput').value.trim();
+    const rawProductUrl = (document.getElementById('giftProductUrlInput')?.value || '').trim();
     const imageFit = getSelectedImageFit();
     const errEl = document.getElementById('giftFormErrorMsg');
     const submitBtn = document.getElementById('saveGiftSubmitBtn');
@@ -2983,6 +3020,17 @@
       errEl.hidden = false;
       document.getElementById('giftTitleInput').focus();
       return;
+    }
+
+    let productUrl = '';
+    if (rawProductUrl) {
+      productUrl = normalizeWebUrl(rawProductUrl);
+      if (!productUrl) {
+        errEl.textContent = '올바른 쇼핑몰 웹사이트 URL을 입력해 주세요. (예: https://...)';
+        errEl.hidden = false;
+        document.getElementById('giftProductUrlInput').focus();
+        return;
+      }
     }
 
     let finalImageUrl = manualUrl || editorPhotoDataUrl || '';
@@ -2998,7 +3046,7 @@
 
       if (isCloudConnected && supabaseClient) {
         const token = getStoredOwnerSessionToken(currentCampaignId);
-        const { error } = await supabaseClient.rpc('owner_save_gift', {
+        let saveRes = await supabaseClient.rpc('owner_save_gift', {
           p_campaign_id: currentCampaignId,
           p_session_token: token,
           p_gift_id: editId || '',
@@ -3009,11 +3057,30 @@
           p_goal_amount: goalAmount,
           p_description: description,
           p_image_url: finalImageUrl,
-          p_image_fit: imageFit
+          p_image_fit: imageFit,
+          p_product_url: productUrl
         });
 
-        if (error) {
-          throw new Error(error.message);
+        // Pre-migration fallback: if 12-param RPC not found yet, call 11-param version
+        if (saveRes.error && /could not find the function/i.test(saveRes.error.message || '')) {
+          console.warn('[GiftSave] Falling back to 11-param owner_save_gift');
+          saveRes = await supabaseClient.rpc('owner_save_gift', {
+            p_campaign_id: currentCampaignId,
+            p_session_token: token,
+            p_gift_id: editId || '',
+            p_category: category,
+            p_priority: priority,
+            p_title: title,
+            p_brand: brand,
+            p_goal_amount: goalAmount,
+            p_description: description,
+            p_image_url: finalImageUrl,
+            p_image_fit: imageFit
+          });
+        }
+
+        if (saveRes.error) {
+          throw new Error(saveRes.error.message);
         }
         await fetchCampaignFromSupabase(currentCampaignId, true);
       } else {
@@ -3030,7 +3097,8 @@
               goalAmount,
               description,
               imageUrl: finalImageUrl,
-              imageFit
+              imageFit,
+              productUrl
             };
           }
         } else {
@@ -3044,7 +3112,8 @@
             goalAmount,
             description,
             imageUrl: finalImageUrl,
-            imageFit
+            imageFit,
+            productUrl
           });
         }
         saveCurrentStateToLocalMultiDb();

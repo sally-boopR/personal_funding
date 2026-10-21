@@ -79,6 +79,7 @@ create table if not exists public.gifts (
   description text not null default '',
   image_url text not null default '',
   image_fit text not null default 'cover' check (image_fit in ('cover', 'contain')),
+  product_url text not null default '',
   created_at timestamptz not null default now()
 );
 
@@ -165,6 +166,7 @@ drop function if exists public.owner_reset_contributions(text, text);
 drop function if exists public.owner_delete_contribution(text, text, text);
 drop function if exists public.owner_set_contribution_status(text, text, text, text);
 drop function if exists public.owner_delete_gift(text, text, text);
+drop function if exists public.owner_save_gift(text, text, text, text, integer, text, text, integer, text, text, text, text);
 drop function if exists public.owner_save_gift(text, text, text, text, integer, text, text, integer, text, text, text);
 drop function if exists public.owner_update_campaign(text, text, text, text, text, text, text, text, text, text, text, text, text, text);
 drop function if exists public.owner_update_campaign(text, text, text, text, text, text, text, text, text, text, text, text);
@@ -792,7 +794,8 @@ create function public.owner_save_gift(
   p_goal_amount integer,
   p_description text,
   p_image_url text,
-  p_image_fit text
+  p_image_fit text,
+  p_product_url text default ''
 )
 returns text
 language plpgsql
@@ -802,6 +805,7 @@ as $$
 declare
   v_cid text := trim(coalesce(p_campaign_id, ''));
   v_gid text := trim(coalesce(p_gift_id, ''));
+  v_prod_url text := trim(coalesce(p_product_url, ''));
   v_existing_cid text;
   v_gift_count integer;
 begin
@@ -840,7 +844,7 @@ begin
     v_gid := v_cid || '-gift-' || encode(gen_random_bytes(5), 'hex');
 
     insert into public.gifts (
-      id, campaign_id, category, priority, title, brand, goal_amount, description, image_url, image_fit
+      id, campaign_id, category, priority, title, brand, goal_amount, description, image_url, image_fit, product_url
     ) values (
       v_gid,
       v_cid,
@@ -851,7 +855,8 @@ begin
       p_goal_amount,
       trim(coalesce(p_description, '')),
       trim(coalesce(p_image_url, '')),
-      case when p_image_fit = 'contain' then 'contain' else 'cover' end
+      case when p_image_fit = 'contain' then 'contain' else 'cover' end,
+      v_prod_url
     );
   else
     update public.gifts
@@ -862,7 +867,8 @@ begin
         goal_amount = p_goal_amount,
         description = trim(coalesce(p_description, '')),
         image_url = trim(coalesce(p_image_url, '')),
-        image_fit = case when p_image_fit = 'contain' then 'contain' else 'cover' end
+        image_fit = case when p_image_fit = 'contain' then 'contain' else 'cover' end,
+        product_url = v_prod_url
     where id = v_gid
       and campaign_id = v_cid;
   end if;
@@ -1232,6 +1238,7 @@ revoke all on function public.login_campaign_owner(text, text) from public, anon
 revoke all on function public.logout_campaign_owner(text, text) from public, anon, authenticated;
 revoke all on function public.owner_update_campaign(text, text, text, text, text, text, text, text, text, text, text, text, text, text) from public, anon, authenticated;
 revoke all on function public.owner_update_campaign(text, text, text, text, text, text, text, text, text, text, text, text) from public, anon, authenticated;
+revoke all on function public.owner_save_gift(text, text, text, text, integer, text, text, integer, text, text, text, text) from public, anon, authenticated;
 revoke all on function public.owner_save_gift(text, text, text, text, integer, text, text, integer, text, text, text) from public, anon, authenticated;
 revoke all on function public.owner_delete_gift(text, text, text) from public, anon, authenticated;
 revoke all on function public.owner_set_contribution_status(text, text, text, text) from public, anon, authenticated;
@@ -1251,7 +1258,7 @@ grant execute on function public.create_funding_campaign(text, text, text, text,
 grant execute on function public.login_campaign_owner(text, text) to anon, authenticated;
 grant execute on function public.logout_campaign_owner(text, text) to anon, authenticated;
 grant execute on function public.owner_update_campaign(text, text, text, text, text, text, text, text, text, text, text, text, text, text) to anon, authenticated;
-grant execute on function public.owner_save_gift(text, text, text, text, integer, text, text, integer, text, text, text) to anon, authenticated;
+grant execute on function public.owner_save_gift(text, text, text, text, integer, text, text, integer, text, text, text, text) to anon, authenticated;
 grant execute on function public.owner_delete_gift(text, text, text) to anon, authenticated;
 grant execute on function public.owner_set_contribution_status(text, text, text, text) to anon, authenticated;
 grant execute on function public.owner_delete_contribution(text, text, text) to anon, authenticated;

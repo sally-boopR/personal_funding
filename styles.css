@@ -1959,7 +1959,45 @@ html.intro-fading-out .birthday-intro-overlay {
 
 .gift-card-footer {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.btn-product-link {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--pink-deep);
+  background: rgba(250, 240, 242, 0.7);
+  border: 1px solid var(--pink-dusty);
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: all 0.2s var(--ease-out);
+  box-sizing: border-box;
+}
+
+.btn-product-link:hover {
+  background: #ffffff;
+  color: var(--pink-main);
+  border-color: var(--pink-main);
+  box-shadow: 0 3px 10px rgba(169, 101, 117, 0.16);
+  transform: translateY(-1px);
+}
+
+.btn-product-link svg {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.btn-product-link:hover svg {
+  transform: translate(1px, -1px);
 }
 
 .btn-pledge-card {
