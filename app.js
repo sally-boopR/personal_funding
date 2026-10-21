@@ -1312,11 +1312,13 @@
       const introFitSelect = document.getElementById('createIntroPhotoFitSelect');
       const introFit = (introFitSelect && introFitSelect.value === 'contain') ? 'contain' : 'cover';
 
-      if (introFile) {
+      const fileOrBlobToUpload = createIntroPhotoCropBlob || introFile;
+
+      if (fileOrBlobToUpload) {
         try {
           submitBtn.textContent = '🖼️ 인트로 사진 업로드 중...';
           if (isCloudConnected && supabaseClient) {
-            const objectPath = await uploadIntroPhotoToStorage(introFile, issuedCampaignId);
+            const objectPath = await uploadIntroPhotoToStorage(fileOrBlobToUpload, issuedCampaignId);
             const { data: photoData, error: photoError } = await supabaseClient.rpc('owner_set_intro_photo', {
               p_campaign_id: issuedCampaignId,
               p_session_token: issuedToken,
@@ -1332,14 +1334,14 @@
             }
           } else {
             // Local preview fallback
-            const reader = new FileReader();
-            const dataUrl = await new Promise((resolve) => {
+            const finalDataUrl = createIntroPhotoCropDataUrl || await new Promise((resolve) => {
+              const reader = new FileReader();
               reader.onload = (ev) => resolve(ev.target.result);
-              reader.readAsDataURL(introFile);
+              reader.readAsDataURL(fileOrBlobToUpload);
             });
             const db = loadLocalMultiDb();
             if (db.campaigns[issuedCampaignId]) {
-              db.campaigns[issuedCampaignId].campaign.introImageUrl = dataUrl;
+              db.campaigns[issuedCampaignId].campaign.introImageUrl = finalDataUrl;
               db.campaigns[issuedCampaignId].campaign.introImageFit = introFit;
               saveLocalMultiDb(db);
             }
@@ -1351,6 +1353,9 @@
       }
 
       if (introFileInput) introFileInput.value = '';
+      createIntroPhotoRawSource = null;
+      createIntroPhotoCropBlob = null;
+      createIntroPhotoCropDataUrl = '';
       const previewWrap = document.getElementById('createIntroPhotoPreviewWrap');
       if (previewWrap) previewWrap.hidden = true;
 
@@ -1541,6 +1546,160 @@
     throw new Error('Supabase Storage 연결을 확인해 주세요.');
   }
 
+  // =========================================================================
+  // PHOTO CROP & EDIT MANAGER (Cropper.js)
+  // =========================================================================
+  let activeCropper = null;
+  let activeCropContext = null;
+  let activeCropObjectUrl = null;
+  let activeCropScaleX = 1;
+
+  let createIntroPhotoRawSource = null;
+  let createIntroPhotoCropBlob = null;
+  let createIntroPhotoCropDataUrl = '';
+
+  let giftPhotoRawSource = null;
+
+  let profileIntroPhotoRawSource = null;
+  let profileSelectedIntroBlob = null;
+  let profileIntroPhotoCropDataUrl = '';
+
+  async function resolveImageSourceToUrl(source) {
+    if (!source) throw new Error('편집할 사진 소스가 없습니다.');
+    if (typeof source === 'string') {
+      if (source.startsWith('data:') || source.startsWith('blob:')) {
+        return source;
+      }
+      // Remote URL: try fetch blob to prevent canvas cross-origin taint
+      try {
+        const resp = await fetch(source, { mode: 'cors' });
+        if (resp.ok) {
+          const b = await resp.blob();
+          const objUrl = URL.createObjectURL(b);
+          activeCropObjectUrl = objUrl;
+          return objUrl;
+        }
+      } catch (e) {
+        console.warn('[Cropper] Fetch remote image blob failed, using direct URL:', e);
+      }
+      return source;
+    }
+    if (source instanceof Blob || source instanceof File) {
+      const objUrl = URL.createObjectURL(source);
+      activeCropObjectUrl = objUrl;
+      return objUrl;
+    }
+    throw new Error('지원되지 않는 이미지 소스 형식입니다.');
+  }
+
+  async function openPhotoCropModal({ source, initialAspect = 1, onApply, onCancel, originalMime = 'image/jpeg' }) {
+    if (typeof Cropper === 'undefined') {
+      showToast('⚠️ 사진 편집 라이브러리를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.');
+      return;
+    }
+
+    closePhotoCropModal(false);
+
+    const backdrop = document.getElementById('photoCropModalBackdrop');
+    const targetImg = document.getElementById('cropperTargetImg');
+    if (!backdrop || !targetImg) return;
+
+    try {
+      const resolvedSrc = await resolveImageSourceToUrl(source);
+      activeCropContext = { source, initialAspect, onApply, onCancel, originalMime };
+      activeCropScaleX = 1;
+
+      targetImg.onload = () => {
+        targetImg.onload = null;
+
+        let aspectNum = NaN;
+        if (initialAspect === 1 || initialAspect === '1') aspectNum = 1;
+        else if (initialAspect === 0.8 || initialAspect === '0.8') aspectNum = 4 / 5;
+        else if (initialAspect === 1.777777 || initialAspect === '16:9') aspectNum = 16 / 9;
+        else if (initialAspect === 'free') aspectNum = NaN;
+        else if (typeof initialAspect === 'number' && initialAspect > 0) aspectNum = initialAspect;
+
+        document.querySelectorAll('.crop-ratio-btn').forEach((btn) => {
+          const r = btn.getAttribute('data-ratio');
+          const isMatch = (isNaN(aspectNum) && r === 'free') || (!isNaN(aspectNum) && r !== 'free' && Math.abs(Number(r) - aspectNum) < 0.05);
+          btn.classList.toggle('active', isMatch);
+        });
+
+        const slider = document.getElementById('cropZoomSlider');
+        if (slider) slider.value = 1;
+
+        if (activeCropper) {
+          activeCropper.destroy();
+          activeCropper = null;
+        }
+
+        activeCropper = new Cropper(targetImg, {
+          aspectRatio: aspectNum,
+          viewMode: 1,
+          dragMode: 'move',
+          autoCropArea: 0.96,
+          restore: false,
+          modal: true,
+          guides: true,
+          center: true,
+          highlight: false,
+          cropBoxMovable: true,
+          cropBoxResizable: true,
+          toggleDragModeOnDblclick: true,
+          preview: '#cropLivePreviewBox',
+          zoomOnTouch: true,
+          zoomOnWheel: true,
+          responsive: true,
+          ready() {
+            if (slider) slider.value = 1;
+          },
+          zoom(e) {
+            if (slider && e.detail && typeof e.detail.ratio === 'number') {
+              slider.value = Math.min(3, Math.max(0.1, e.detail.ratio));
+            }
+          }
+        });
+      };
+
+      targetImg.crossOrigin = 'anonymous';
+      targetImg.src = resolvedSrc;
+
+      backdrop.hidden = false;
+      backdrop.setAttribute('aria-hidden', 'false');
+    } catch (err) {
+      console.error('[Cropper] Open modal error:', err);
+      showToast(err.message || '사진 편집창을 여는 중 오류가 발생했습니다.');
+    }
+  }
+
+  function closePhotoCropModal(triggerCancel = true) {
+    if (triggerCancel && activeCropContext && typeof activeCropContext.onCancel === 'function') {
+      try {
+        activeCropContext.onCancel();
+      } catch (e) {}
+    }
+    if (activeCropper) {
+      activeCropper.destroy();
+      activeCropper = null;
+    }
+    if (activeCropObjectUrl) {
+      try {
+        URL.revokeObjectURL(activeCropObjectUrl);
+      } catch (e) {}
+      activeCropObjectUrl = null;
+    }
+    activeCropContext = null;
+    const backdrop = document.getElementById('photoCropModalBackdrop');
+    if (backdrop) {
+      backdrop.hidden = true;
+      backdrop.setAttribute('aria-hidden', 'true');
+    }
+    const targetImg = document.getElementById('cropperTargetImg');
+    if (targetImg) {
+      targetImg.src = '';
+    }
+  }
+
   async function uploadIntroPhotoToStorage(file, campaignId) {
     if (!file) throw new Error('업로드할 사진 파일이 없습니다.');
     if (file.size > MAX_UPLOAD_FILE_BYTES) {
@@ -1556,7 +1715,7 @@
       if (['jpg', 'jpeg', 'png', 'webp'].includes(nameExt)) {
         ext = nameExt === 'jpeg' ? 'jpg' : nameExt;
       } else {
-        throw new Error('지원하지 않는 이미지 형식입니다. JPG, PNG, WebP 파일만 업로드할 수 있습니다.');
+        ext = 'jpg';
       }
     }
 
@@ -2026,19 +2185,8 @@
         const pLabel = priorityLabels[gift.priority] || '위시 선물';
 
         let statusBadge = '';
-        let replayActionHtml = '';
         if (metrics.isCompleted) {
-          statusBadge = `
-            <div class="gift-badges-right">
-              <span class="status-pill completed">100% 달성 완료</span>
-              <button type="button" class="btn-replay-celebration" data-action="replay-gift-celebration" data-gift-id="${escapeHtml(gift.id)}" title="100% 달성 축하 애니메이션 다시보기">🐰 축하 다시보기</button>
-            </div>
-          `;
-          replayActionHtml = `
-            <button type="button" class="btn-replay-celebration-action" data-action="replay-gift-celebration" data-gift-id="${escapeHtml(gift.id)}" title="100% 달성 축하 애니메이션 다시보기">
-              <span>🐰 100% 달성 축하 애니메이션 다시보기</span>
-            </button>
-          `;
+          statusBadge = `<span class="status-pill completed">100% 달성 완료</span>`;
         } else if (metrics.pendingCount > 0) {
           statusBadge = `<span class="status-pill in-progress">승인 ${metrics.approvedCount} · 대기 ${metrics.pendingCount}</span>`;
         } else {
@@ -2119,7 +2267,6 @@
 
               <div class="gift-card-footer">
                 ${productLinkHtml}
-                ${replayActionHtml}
                 <button type="button" class="btn-pledge-card" data-action="open-pledge" data-gift-id="${escapeHtml(gift.id)}">
                   ${ctaLabel}
                 </button>
@@ -2714,6 +2861,7 @@
       }
 
       lastSubmitTimestamp = Date.now();
+      lastPledgedGift = targetGift;
 
       document.getElementById('receiptAvatarWrap').innerHTML = renderAvatarMediaHtml(finalAvatarUrl, senderName);
       document.getElementById('receiptSender').textContent = `${senderName} (${relation})`;
@@ -2733,6 +2881,9 @@
       resetPledgeAvatarState();
 
       showToast('「입금 확인 대기」 상태로 접수되었습니다.');
+
+      // 후원 신청 정상 등록 시 토끼 축하 애니메이션 + 팡파르 실행
+      playBunnyCelebration(targetGift);
     } catch (err) {
       errorEl.textContent = err.message || '펀딩 참여 처리 중 오류가 발생했습니다.';
       errorEl.hidden = false;
@@ -2910,6 +3061,7 @@
     const previewImg = document.getElementById('giftPhotoPreviewImg');
     const placeholder = document.getElementById('giftPhotoPlaceholder');
     const removeBtn = document.getElementById('removeGiftPhotoBtn');
+    const recropBtn = document.getElementById('recropGiftPhotoBtn');
 
     previewImg.classList.toggle('fit-contain', fitMode === 'contain');
 
@@ -2918,11 +3070,13 @@
       previewImg.hidden = false;
       placeholder.hidden = true;
       removeBtn.hidden = false;
+      if (recropBtn) recropBtn.hidden = false;
     } else {
       previewImg.src = '';
       previewImg.hidden = true;
       placeholder.hidden = false;
       removeBtn.hidden = true;
+      if (recropBtn) recropBtn.hidden = true;
     }
 
     const noticeEl = document.getElementById('giftStorageNotice');
@@ -2970,6 +3124,7 @@
     fileInput.value = '';
     editorPhotoDataUrl = '';
     editorPhotoBlob = null;
+    giftPhotoRawSource = null;
 
     if (editGiftId) {
       const existing = state.gifts.find((g) => g.id === editGiftId);
@@ -3196,6 +3351,9 @@
 
     // Reset intro photo management state in owner settings
     profileSelectedIntroFile = null;
+    profileSelectedIntroBlob = null;
+    profileIntroPhotoRawSource = null;
+    profileIntroPhotoCropDataUrl = '';
     profileIntroPhotoMarkedForDelete = false;
 
     const photoInput = document.getElementById('profileIntroPhotoInput');
@@ -3207,6 +3365,7 @@
     const photoThumb = document.getElementById('profileIntroPhotoImg');
     const photoPlaceholder = document.getElementById('profileIntroPhotoPlaceholder');
     const deleteBtn = document.getElementById('profileIntroPhotoDeleteBtn');
+    const recropBtn = document.getElementById('profileIntroPhotoRecropBtn');
     const statusText = document.getElementById('profileIntroPhotoStatusText');
     if (statusText) statusText.textContent = '';
 
@@ -3217,11 +3376,13 @@
         photoThumb.hidden = false;
         if (photoPlaceholder) photoPlaceholder.hidden = true;
         if (deleteBtn) deleteBtn.hidden = false;
+        if (recropBtn) recropBtn.hidden = false;
       } else {
         photoThumb.src = '';
         photoThumb.hidden = true;
         if (photoPlaceholder) photoPlaceholder.hidden = false;
         if (deleteBtn) deleteBtn.hidden = true;
+        if (recropBtn) recropBtn.hidden = true;
       }
     }
 
@@ -3799,15 +3960,9 @@
           return;
         }
 
-        // ④ 미확인 100% 달성 선물 확인 후 토끼 축하 실행
-        const completedUnseen = findUncelebratedCompletedGift();
-        if (completedUnseen) {
-          markGiftCelebrated(currentCampaignId, completedUnseen.id);
-          playBunnyCelebration(completedUnseen);
-        } else {
-          checkFirstVisitGuideOnLoad();
-        }
-      }, 1000);
+        // 인트로 종료 후 첫 방문 안내 팝업 확인
+        checkFirstVisitGuideOnLoad();
+      }, 800);
     }, 660);
     introTimers.push(cleanupTid);
   }
@@ -3851,14 +4006,8 @@
             playBunnyCelebration(g);
             return;
           }
-          const completedUnseen = findUncelebratedCompletedGift();
-          if (completedUnseen) {
-            markGiftCelebrated(currentCampaignId, completedUnseen.id);
-            playBunnyCelebration(completedUnseen);
-          } else {
-            checkFirstVisitGuideOnLoad();
-          }
-        }, 800);
+          checkFirstVisitGuideOnLoad();
+        }, 500);
         return;
       }
     }
@@ -4298,11 +4447,25 @@
   // =========================================================================
   // FANFARE SOUND EFFECT MANAGER (토끼 축하 팡파르 효과음)
   // =========================================================================
-  const FANFARE_AUDIO_SRC = './freesound_community-064034_fasching-fanfare-47823.mp3';
   const FANFARE_DEFAULT_VOLUME = 0.42;
   const CELEBRATION_SOUND_STORAGE_KEY = 'pf_celebration_sound_enabled';
-  let fanfareAudio = null;
   let fanfareFadeInterval = null;
+  let lastPledgedGift = null;
+
+  function getFanfareAudioUrl() {
+    const filename = 'freesound_community-064034_fasching-fanfare-47823.mp3';
+    try {
+      let p = window.location.pathname;
+      if (/\.html?$/i.test(p)) {
+        p = p.substring(0, p.lastIndexOf('/') + 1);
+      } else if (!p.endsWith('/')) {
+        p += '/';
+      }
+      return new URL(filename, window.location.origin + p).href;
+    } catch (e) {
+      return './' + filename;
+    }
+  }
 
   function isCelebrationSoundEnabled() {
     try {
@@ -4333,24 +4496,46 @@
     }
   }
 
+  function getFanfareAudioElement() {
+    let audio = document.getElementById('bunnyFanfareAudio');
+    if (!audio) {
+      audio = document.createElement('audio');
+      audio.id = 'bunnyFanfareAudio';
+      audio.preload = 'auto';
+      audio.playsInline = true;
+      document.body.appendChild(audio);
+    }
+    const targetUrl = getFanfareAudioUrl();
+    if (!audio.src || !audio.src.includes('freesound_community-064034_fasching-fanfare-47823.mp3')) {
+      audio.src = targetUrl;
+      audio.load();
+    }
+    return audio;
+  }
+
   function playCelebrationFanfare() {
     stopCelebrationFanfare(false);
     if (!isCelebrationSoundEnabled()) return;
 
     try {
-      if (!fanfareAudio) {
-        fanfareAudio = new Audio(FANFARE_AUDIO_SRC);
-        fanfareAudio.preload = 'auto';
-      }
-      fanfareAudio.pause();
-      fanfareAudio.currentTime = 0;
-      fanfareAudio.volume = FANFARE_DEFAULT_VOLUME;
-      const playPromise = fanfareAudio.play();
+      const audio = getFanfareAudioElement();
+      audio.volume = FANFARE_DEFAULT_VOLUME;
+      try {
+        if (audio.readyState > 0) {
+          audio.currentTime = 0;
+        }
+      } catch (seekErr) {}
+
+      const playPromise = audio.play();
       if (playPromise !== undefined) {
-        playPromise.catch((err) => {
-          // 브라우저의 자동재생 제한(Autoplay policy) 시 무음으로 부드럽게 넘김
-          console.warn('Fanfare autoplay prevented by browser policy:', err);
-        });
+        playPromise
+          .then(() => {
+            console.log('Fanfare audio playing successfully:', audio.currentSrc);
+          })
+          .catch((err) => {
+            // 브라우저의 자동재생 제한(Autoplay policy) 시 콘솔 로그 기록
+            console.warn('Fanfare autoplay prevented by browser policy:', err);
+          });
       }
     } catch (e) {
       console.warn('Error playing fanfare audio:', e);
@@ -4362,35 +4547,41 @@
       clearInterval(fanfareFadeInterval);
       fanfareFadeInterval = null;
     }
-    if (!fanfareAudio) return;
+    const audio = document.getElementById('bunnyFanfareAudio');
+    if (!audio) return;
 
     if (!smooth) {
       try {
-        fanfareAudio.pause();
-        fanfareAudio.currentTime = 0;
-        fanfareAudio.volume = FANFARE_DEFAULT_VOLUME;
+        audio.pause();
+        if (audio.readyState > 0) {
+          audio.currentTime = 0;
+        }
+        audio.volume = FANFARE_DEFAULT_VOLUME;
       } catch (e) {}
       return;
     }
 
     // 약 350ms 동안 볼륨을 단계적으로 낮추며 자연스러운 페이드아웃
     const stepTime = 35;
-    const stepDec = fanfareAudio.volume / (350 / stepTime);
+    const stepDec = audio.volume / (350 / stepTime);
     fanfareFadeInterval = setInterval(() => {
-      if (!fanfareAudio) {
+      const a = document.getElementById('bunnyFanfareAudio');
+      if (!a) {
         clearInterval(fanfareFadeInterval);
         fanfareFadeInterval = null;
         return;
       }
-      if (fanfareAudio.volume > stepDec) {
-        fanfareAudio.volume = Math.max(0, fanfareAudio.volume - stepDec);
+      if (a.volume > stepDec) {
+        a.volume = Math.max(0, a.volume - stepDec);
       } else {
         clearInterval(fanfareFadeInterval);
         fanfareFadeInterval = null;
         try {
-          fanfareAudio.pause();
-          fanfareAudio.currentTime = 0;
-          fanfareAudio.volume = FANFARE_DEFAULT_VOLUME;
+          a.pause();
+          if (a.readyState > 0) {
+            a.currentTime = 0;
+          }
+          a.volume = FANFARE_DEFAULT_VOLUME;
         } catch (e) {}
       }
     }, stepTime);
@@ -4410,21 +4601,27 @@
     }
   }
 
-  function playBunnyCelebration(gift) {
-    if (!gift) return;
+  function playBunnyCelebration(gift = null) {
+    if (gift) {
+      lastPledgedGift = gift;
+    }
     closeBunnyCelebration();
 
     const overlay = document.getElementById('bunnyCelebrationOverlay');
     const dialog = document.getElementById('bunnyCelebrationDialog');
+    const badgeEl = document.getElementById('bunnyBubbleBadge');
     const titleEl = document.getElementById('bunnyBubbleTitle');
     const giftEl = document.getElementById('bunnyBubbleGift');
     if (!overlay || !dialog) return;
 
+    if (badgeEl) {
+      badgeEl.textContent = '✨ THANK YOU! ♡ ✨';
+    }
     if (titleEl) {
-      titleEl.textContent = '펀딩 달성! 마음이 모였어요 ♡';
+      titleEl.textContent = '소중한 마음 고마워요! ♡';
     }
     if (giftEl) {
-      giftEl.textContent = `「${gift.title || '위시 선물'}」 100% 달성 축하 🎉`;
+      giftEl.textContent = '후원 신청이 접수되었어요! 입금 확인 후 선물에 마음이 더해질 거예요.';
     }
 
     // Force CSS reflow so animation restarts cleanly from frame 0 every time
@@ -4437,7 +4634,7 @@
     dialog.classList.add('is-animating');
     updateSoundToggleButtonUI();
 
-    // 2. 토끼가 화면에 나타나는 바로 그 순간 팡파르 재생 시작!
+    // 토끼가 화면에 나타나는 바로 그 순간 팡파르 재생 시작!
     playCelebrationFanfare();
 
     // 2.3s: Triumph victory pose (arms raised with drumsticks, laughing eyes, happy smile, confetti!)
@@ -4446,7 +4643,7 @@
       launchConfetti();
     }, 2300);
 
-    // 3.6s: Soft fade-out slide down & 4. 토끼 퇴장 시 팡파르 소리도 자연스럽게 페이드아웃
+    // 3.6s: Soft fade-out slide down & 토끼 퇴장 시 팡파르 소리도 자연스럽게 페이드아웃
     bunnyCelebrationTimer2 = setTimeout(() => {
       dialog.classList.add('is-fading-out');
       stopCelebrationFanfare(true);
@@ -4455,8 +4652,10 @@
     // 4.0s: Clean up and hide
     bunnyCelebrationTimer3 = setTimeout(() => {
       closeBunnyCelebration();
-      // After celebration finishes, check if first-visit user guide modal needs to be shown
-      if (!isUserGuideDismissed() && !isIntroActive()) {
+      // 후원 모달이 열려있는 중에는 첫 방문 가이드 팝업을 띄우지 않음
+      const pledgeBackdrop = document.getElementById('pledgeModalBackdrop');
+      const isPledgeModalOpen = pledgeBackdrop && !pledgeBackdrop.hidden;
+      if (!isUserGuideDismissed() && !isIntroActive() && !isPledgeModalOpen) {
         setTimeout(() => {
           if (!isIntroActive()) openUserGuideModal();
         }, 400);
@@ -4465,13 +4664,7 @@
   }
 
   function checkUncelebratedGiftsOnLoad() {
-    if (!currentCampaignId || !Array.isArray(state.gifts)) return;
-    if (isIntroActive()) return;
-    const completedUnseen = findUncelebratedCompletedGift();
-    if (completedUnseen) {
-      markGiftCelebrated(currentCampaignId, completedUnseen.id);
-      playBunnyCelebration(completedUnseen);
-    }
+    // 100% 달성 조건과 토끼 자동 축하가 분리되었으므로 페이지 로드 시 자동 실행하지 않음
   }
 
   // =========================================================================
@@ -4687,35 +4880,67 @@
       }
     });
 
-    // Create Funding Intro Photo Preview Events
+    // Create Funding Intro Photo Preview & Crop Events
     const createPhotoInput = document.getElementById('createIntroPhotoInput');
     const createPreviewWrap = document.getElementById('createIntroPhotoPreviewWrap');
     const createPreviewImg = document.getElementById('createIntroPhotoPreviewImg');
     const createFitSelect = document.getElementById('createIntroPhotoFitSelect');
     const createCancelBtn = document.getElementById('createIntroPhotoCancelBtn');
+    const createRecropBtn = document.getElementById('createIntroPhotoRecropBtn');
 
     if (createPhotoInput) {
       createPhotoInput.addEventListener('change', (e) => {
         const file = e.target.files && e.target.files[0];
         if (!file) {
-          if (createPreviewWrap) createPreviewWrap.hidden = true;
+          if (createPreviewWrap && !createIntroPhotoCropBlob) createPreviewWrap.hidden = true;
           return;
         }
         if (file.size > MAX_UPLOAD_FILE_BYTES) {
           showToast('⚠️ 사진 크기는 최대 5MB까지 가능합니다.');
           createPhotoInput.value = '';
-          if (createPreviewWrap) createPreviewWrap.hidden = true;
+          if (createPreviewWrap && !createIntroPhotoCropBlob) createPreviewWrap.hidden = true;
           return;
         }
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          if (createPreviewImg) {
-            createPreviewImg.src = ev.target.result;
-            createPreviewImg.className = `intro-preview-thumbnail fit-${(createFitSelect && createFitSelect.value === 'contain') ? 'contain' : 'cover'}`;
+        createIntroPhotoRawSource = file;
+        openPhotoCropModal({
+          source: file,
+          initialAspect: 1,
+          originalMime: file.type || 'image/jpeg',
+          onApply: ({ blob, dataUrl }) => {
+            createIntroPhotoCropBlob = blob;
+            createIntroPhotoCropDataUrl = dataUrl;
+            if (createPreviewImg) {
+              createPreviewImg.src = dataUrl;
+              createPreviewImg.className = `intro-preview-thumbnail fit-${(createFitSelect && createFitSelect.value === 'contain') ? 'contain' : 'cover'}`;
+            }
+            if (createPreviewWrap) createPreviewWrap.hidden = false;
+          },
+          onCancel: () => {
+            if (!createIntroPhotoCropBlob) {
+              createPhotoInput.value = '';
+              if (createPreviewWrap) createPreviewWrap.hidden = true;
+            }
           }
-          if (createPreviewWrap) createPreviewWrap.hidden = false;
-        };
-        reader.readAsDataURL(file);
+        });
+      });
+    }
+
+    if (createRecropBtn) {
+      createRecropBtn.addEventListener('click', () => {
+        const src = createIntroPhotoRawSource || createIntroPhotoCropDataUrl;
+        if (!src) return;
+        openPhotoCropModal({
+          source: src,
+          initialAspect: 1,
+          onApply: ({ blob, dataUrl }) => {
+            createIntroPhotoCropBlob = blob;
+            createIntroPhotoCropDataUrl = dataUrl;
+            if (createPreviewImg) {
+              createPreviewImg.src = dataUrl;
+            }
+            if (createPreviewWrap) createPreviewWrap.hidden = false;
+          }
+        });
       });
     }
 
@@ -4728,7 +4953,11 @@
     if (createCancelBtn && createPhotoInput) {
       createCancelBtn.addEventListener('click', () => {
         createPhotoInput.value = '';
+        createIntroPhotoRawSource = null;
+        createIntroPhotoCropBlob = null;
+        createIntroPhotoCropDataUrl = '';
         if (createPreviewWrap) createPreviewWrap.hidden = true;
+        if (createPreviewImg) createPreviewImg.src = '';
       });
     }
 
@@ -4966,12 +5195,7 @@
         const targetGiftAfter = state.gifts.find((g) => String(g.id || '').trim() === String(target.giftId || '').trim()) || targetGiftBefore;
         const isCompletedNow = targetGiftAfter ? getGiftMetrics(targetGiftAfter).isCompleted : false;
 
-        if (!wasCompletedBefore && isCompletedNow) {
-          markGiftCelebrated(currentCampaignId, targetGiftAfter.id);
-          playBunnyCelebration(targetGiftAfter);
-        } else {
-          launchConfetti();
-        }
+        launchConfetti();
         showToast(`✅ ${target.senderName}님의 입금(${formatKRW(target.amount)})이 승인되어 달성률에 반영되었습니다!`);
       } else if (action === 'unapprove-pledge') {
         if (!requireAdminPermission('입금 승인 취소')) return;
@@ -5174,23 +5398,62 @@
       document.getElementById('guestbookSection').scrollIntoView({ behavior: 'smooth' });
     });
 
+    const receiptReplayBtn = document.getElementById('receiptReplayCelebrationBtn');
+    if (receiptReplayBtn) {
+      receiptReplayBtn.addEventListener('click', () => {
+        playBunnyCelebration(lastPledgedGift);
+      });
+    }
+
     // Gift Photo File Upload, URL Input, Fit Radio & Delete Events
     document.getElementById('giftPhotoFileInput').addEventListener('change', async (e) => {
       const file = e.target.files && e.target.files[0];
       if (!file) return;
-      try {
-        const result = await compressImageFile(file, 720, 0.84);
-        editorPhotoDataUrl = result.dataUrl;
-        editorPhotoBlob = result.blob;
-        editorPhotoMime = result.mime;
-        document.getElementById('giftImageUrlInput').value = '';
-        updateEditorPhotoPreview(editorPhotoDataUrl, getSelectedImageFit());
-        showToast('사진이 1:1 미리보기에 적용 및 용량 최적화되었습니다.');
-      } catch (err) {
+      if (file.size > MAX_UPLOAD_FILE_BYTES) {
+        showToast('⚠️ 사진 크기는 최대 5MB까지 가능합니다.');
         e.target.value = '';
-        showToast(err.message || '사진 처리 중 오류가 발생했습니다.');
+        return;
       }
+      giftPhotoRawSource = file;
+      openPhotoCropModal({
+        source: file,
+        initialAspect: 1,
+        originalMime: file.type || 'image/jpeg',
+        onApply: ({ blob, dataUrl, mime }) => {
+          editorPhotoBlob = blob;
+          editorPhotoDataUrl = dataUrl;
+          editorPhotoMime = mime || 'image/jpeg';
+          document.getElementById('giftImageUrlInput').value = '';
+          updateEditorPhotoPreview(editorPhotoDataUrl, getSelectedImageFit());
+          showToast('사진이 1:1 미리보기에 적용되었습니다.');
+        },
+        onCancel: () => {
+          if (!editorPhotoBlob && !editorPhotoDataUrl) {
+            e.target.value = '';
+          }
+        }
+      });
     });
+
+    const recropGiftBtn = document.getElementById('recropGiftPhotoBtn');
+    if (recropGiftBtn) {
+      recropGiftBtn.addEventListener('click', () => {
+        const manualUrl = document.getElementById('giftImageUrlInput').value.trim();
+        const src = giftPhotoRawSource || editorPhotoDataUrl || manualUrl;
+        if (!src) return;
+        openPhotoCropModal({
+          source: src,
+          initialAspect: 1,
+          onApply: ({ blob, dataUrl, mime }) => {
+            editorPhotoBlob = blob;
+            editorPhotoDataUrl = dataUrl;
+            editorPhotoMime = mime || 'image/jpeg';
+            document.getElementById('giftImageUrlInput').value = '';
+            updateEditorPhotoPreview(editorPhotoDataUrl, getSelectedImageFit());
+          }
+        });
+      });
+    }
 
     document.getElementById('giftImageUrlInput').addEventListener('input', (e) => {
       const urlVal = e.target.value.trim();
@@ -5213,6 +5476,7 @@
     document.getElementById('removeGiftPhotoBtn').addEventListener('click', () => {
       editorPhotoDataUrl = '';
       editorPhotoBlob = null;
+      giftPhotoRawSource = null;
       document.getElementById('giftPhotoFileInput').value = '';
       document.getElementById('giftImageUrlInput').value = '';
       updateEditorPhotoPreview('', getSelectedImageFit());
@@ -5256,6 +5520,7 @@
     const profilePhotoImg = document.getElementById('profileIntroPhotoImg');
     const profileFitSelect = document.getElementById('profileIntroPhotoFitSelect');
     const profileDeleteBtn = document.getElementById('profileIntroPhotoDeleteBtn');
+    const profileRecropBtn = document.getElementById('profileIntroPhotoRecropBtn');
     const profileStatusText = document.getElementById('profileIntroPhotoStatusText');
 
     if (profilePhotoInput) {
@@ -5267,22 +5532,61 @@
           profilePhotoInput.value = '';
           return;
         }
-        profileSelectedIntroFile = file;
-        profileIntroPhotoMarkedForDelete = false;
+        profileIntroPhotoRawSource = file;
+        openPhotoCropModal({
+          source: file,
+          initialAspect: 1,
+          originalMime: file.type || 'image/jpeg',
+          onApply: ({ blob, dataUrl }) => {
+            profileSelectedIntroBlob = blob;
+            profileSelectedIntroFile = new File([blob], file.name || 'intro.jpg', { type: blob.type });
+            profileIntroPhotoCropDataUrl = dataUrl;
+            profileIntroPhotoMarkedForDelete = false;
 
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          if (profilePhotoImg) {
-            profilePhotoImg.src = ev.target.result;
-            profilePhotoImg.className = `intro-preview-thumbnail fit-${(profileFitSelect && profileFitSelect.value === 'contain') ? 'contain' : 'cover'}`;
-            profilePhotoImg.hidden = false;
+            if (profilePhotoImg) {
+              profilePhotoImg.src = dataUrl;
+              profilePhotoImg.className = `intro-preview-thumbnail fit-${(profileFitSelect && profileFitSelect.value === 'contain') ? 'contain' : 'cover'}`;
+              profilePhotoImg.hidden = false;
+            }
+            const photoPlaceholder = document.getElementById('profileIntroPhotoPlaceholder');
+            if (photoPlaceholder) photoPlaceholder.hidden = true;
+            if (profileDeleteBtn) profileDeleteBtn.hidden = false;
+            if (profileRecropBtn) profileRecropBtn.hidden = false;
+            if (profileStatusText) profileStatusText.textContent = '새 사진 편집 완료 (저장 시 적용)';
+          },
+          onCancel: () => {
+            if (!profileSelectedIntroFile && !state.campaign.introImageUrl) {
+              profilePhotoInput.value = '';
+            }
           }
-          const photoPlaceholder = document.getElementById('profileIntroPhotoPlaceholder');
-          if (photoPlaceholder) photoPlaceholder.hidden = true;
-          if (profileDeleteBtn) profileDeleteBtn.hidden = false;
-          if (profileStatusText) profileStatusText.textContent = '새 사진 선택됨 (저장 시 적용)';
-        };
-        reader.readAsDataURL(file);
+        });
+      });
+    }
+
+    if (profileRecropBtn) {
+      profileRecropBtn.addEventListener('click', () => {
+        const currentSrc = profileIntroPhotoRawSource || profileIntroPhotoCropDataUrl || (profilePhotoImg && profilePhotoImg.src) || (state.campaign && getIntroPhotoPublicUrl(state.campaign.introImageUrl));
+        if (!currentSrc) return;
+        openPhotoCropModal({
+          source: currentSrc,
+          initialAspect: 1,
+          onApply: ({ blob, dataUrl }) => {
+            profileSelectedIntroBlob = blob;
+            profileSelectedIntroFile = new File([blob], 'intro_crop.jpg', { type: blob.type });
+            profileIntroPhotoCropDataUrl = dataUrl;
+            profileIntroPhotoMarkedForDelete = false;
+
+            if (profilePhotoImg) {
+              profilePhotoImg.src = dataUrl;
+              profilePhotoImg.hidden = false;
+            }
+            const photoPlaceholder = document.getElementById('profileIntroPhotoPlaceholder');
+            if (photoPlaceholder) photoPlaceholder.hidden = true;
+            if (profileDeleteBtn) profileDeleteBtn.hidden = false;
+            profileRecropBtn.hidden = false;
+            if (profileStatusText) profileStatusText.textContent = '사진 편집 완료 (저장 시 적용)';
+          }
+        });
       });
     }
 
@@ -5295,6 +5599,9 @@
     if (profileDeleteBtn) {
       profileDeleteBtn.addEventListener('click', () => {
         profileSelectedIntroFile = null;
+        profileSelectedIntroBlob = null;
+        profileIntroPhotoRawSource = null;
+        profileIntroPhotoCropDataUrl = '';
         profileIntroPhotoMarkedForDelete = true;
         if (profilePhotoInput) profilePhotoInput.value = '';
         if (profilePhotoImg) {
@@ -5304,9 +5611,109 @@
         const photoPlaceholder = document.getElementById('profileIntroPhotoPlaceholder');
         if (photoPlaceholder) photoPlaceholder.hidden = false;
         profileDeleteBtn.hidden = true;
+        if (profileRecropBtn) profileRecropBtn.hidden = true;
         if (profileStatusText) profileStatusText.textContent = '저장 시 사진이 삭제됩니다';
       });
     }
+
+    // Photo Crop Modal Interactive Controls & Button Listeners
+    document.querySelectorAll('.crop-ratio-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (!activeCropper) return;
+        document.querySelectorAll('.crop-ratio-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const r = btn.getAttribute('data-ratio');
+        if (r === 'free') {
+          activeCropper.setAspectRatio(NaN);
+        } else {
+          activeCropper.setAspectRatio(Number(r));
+        }
+      });
+    });
+
+    const cropSlider = document.getElementById('cropZoomSlider');
+    if (cropSlider) {
+      cropSlider.addEventListener('input', (e) => {
+        if (!activeCropper) return;
+        activeCropper.zoomTo(parseFloat(e.target.value));
+      });
+    }
+    document.getElementById('cropZoomInBtn')?.addEventListener('click', () => {
+      if (!activeCropper) return;
+      activeCropper.zoom(0.15);
+    });
+    document.getElementById('cropZoomOutBtn')?.addEventListener('click', () => {
+      if (!activeCropper) return;
+      activeCropper.zoom(-0.15);
+    });
+
+    document.getElementById('cropRotateLeftBtn')?.addEventListener('click', () => {
+      if (!activeCropper) return;
+      activeCropper.rotate(-90);
+    });
+    document.getElementById('cropRotateRightBtn')?.addEventListener('click', () => {
+      if (!activeCropper) return;
+      activeCropper.rotate(90);
+    });
+    document.getElementById('cropFlipHBtn')?.addEventListener('click', () => {
+      if (!activeCropper) return;
+      activeCropScaleX = -activeCropScaleX;
+      activeCropper.scaleX(activeCropScaleX);
+    });
+
+    document.getElementById('cropResetBtn')?.addEventListener('click', () => {
+      if (!activeCropper) return;
+      activeCropper.reset();
+      activeCropScaleX = 1;
+      if (cropSlider) cropSlider.value = 1;
+    });
+
+    document.getElementById('cropCancelBtn')?.addEventListener('click', () => closePhotoCropModal(true));
+    document.getElementById('closePhotoCropModalBtn')?.addEventListener('click', () => closePhotoCropModal(true));
+    document.getElementById('photoCropModalBackdrop')?.addEventListener('click', (e) => {
+      if (e.target.id === 'photoCropModalBackdrop') closePhotoCropModal(true);
+    });
+
+    document.getElementById('cropApplyBtn')?.addEventListener('click', () => {
+      if (!activeCropper || !activeCropContext) return;
+      const ctx = activeCropContext;
+      const isPng = ctx.originalMime === 'image/png';
+      const outputMime = isPng ? 'image/png' : 'image/jpeg';
+
+      const canvas = activeCropper.getCroppedCanvas({
+        maxWidth: 1200,
+        maxHeight: 1200,
+        fillColor: isPng ? 'transparent' : '#FFFFFF',
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: 'high'
+      });
+
+      if (!canvas) {
+        showToast('⚠️ 사진을 자르는 중 오류가 발생했습니다.');
+        return;
+      }
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          showToast('⚠️ 이미지 변환에 실패했습니다.');
+          return;
+        }
+        if (blob.size > MAX_UPLOAD_FILE_BYTES) {
+          showToast('⚠️ 편집된 사진 크기가 5MB를 초과합니다. 다른 크기로 시도해 주세요.');
+          return;
+        }
+        const dataUrl = canvas.toDataURL(outputMime, 0.88);
+        if (typeof ctx.onApply === 'function') {
+          try {
+            ctx.onApply({ blob, dataUrl, mime: outputMime });
+          } catch (e) {
+            console.error('[Cropper] onApply error:', e);
+          }
+        }
+        closePhotoCropModal(false);
+        showToast('✂️ 사진 편집이 완료되었습니다!');
+      }, outputMime, 0.88);
+    });
 
     const retryDeleteBtn = document.getElementById('profileRetryDeletePendingBtn');
     if (retryDeleteBtn) {
@@ -5452,6 +5859,7 @@
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
+        closePhotoCropModal(true);
         if (!introFinished) {
           finishBirthdayIntro();
         }
@@ -5472,6 +5880,9 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    try {
+      getFanfareAudioElement();
+    } catch (e) {}
     bindEvents();
     initSupabaseAndRoute();
   });

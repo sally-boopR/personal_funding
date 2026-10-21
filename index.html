@@ -16,6 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="cropper.min.css" />
   <link rel="stylesheet" href="styles.css" />
   <!-- Prevent Flash of Main Content Before Intro Overlay -->
   <script>
@@ -103,8 +104,11 @@
   <!-- Celebration Confetti Canvas Overlay (Used on Main Page Approval) -->
   <canvas id="confettiCanvas" aria-hidden="true"></canvas>
 
-  <!-- 100% Funding Goal Achievement Soft Bunny Drumming Celebration Overlay -->
-  <div id="bunnyCelebrationOverlay" class="bunny-celebration-overlay" hidden aria-hidden="true" role="dialog" aria-label="100% 펀딩 달성 축하">
+  <!-- Fanfare Audio Element for Reliable Cross-Platform HTML5 Audio Playback -->
+  <audio id="bunnyFanfareAudio" preload="auto" playsinline></audio>
+
+  <!-- 후원 참여 감사 토끼 축하 애니메이션 오버레이 -->
+  <div id="bunnyCelebrationOverlay" class="bunny-celebration-overlay" hidden aria-hidden="true" role="dialog" aria-label="후원 참여 감사 축하">
     <div class="bunny-celebration-backdrop" id="bunnyCelebrationBackdrop"></div>
     <div class="bunny-celebration-dialog" id="bunnyCelebrationDialog">
       <button type="button" class="bunny-sound-toggle-btn" id="bunnySoundToggleBtn" aria-label="효과음 켜기/끄기" title="효과음 켜기/끄기">
@@ -119,9 +123,9 @@
 
       <!-- Cute Speech Bubble -->
       <div class="bunny-speech-bubble" id="bunnySpeechBubble">
-        <div class="bunny-bubble-badge" id="bunnyBubbleBadge">✨ 100% GOAL ACHIEVED! ✨</div>
-        <h3 class="bunny-bubble-title" id="bunnyBubbleTitle">펀딩 달성! 마음이 모였어요 ♡</h3>
-        <p class="bunny-bubble-gift" id="bunnyBubbleGift">소중한 마음이 선물에 닿았습니다</p>
+        <div class="bunny-bubble-badge" id="bunnyBubbleBadge">✨ THANK YOU! ♡ ✨</div>
+        <h3 class="bunny-bubble-title" id="bunnyBubbleTitle">소중한 마음 고마워요! ♡</h3>
+        <p class="bunny-bubble-gift" id="bunnyBubbleGift">후원 신청이 접수되었어요! 입금 확인 후 선물에 마음이 더해질 거예요.</p>
       </div>
 
       <!-- Drum Sparkles & Floating Hearts Container -->
@@ -708,7 +712,10 @@
                         <option value="contain">전체 보기 (사진 전체가 보이도록 맞춤)</option>
                       </select>
                     </div>
-                    <button type="button" class="btn-subtle btn-xs" id="createIntroPhotoCancelBtn">선택 취소</button>
+                    <div style="display: flex; gap: 6px; align-items: center; margin-top: 4px;">
+                      <button type="button" class="btn-secondary btn-xs" id="createIntroPhotoRecropBtn">✂️ 사진 다시 편집</button>
+                      <button type="button" class="btn-subtle btn-xs" id="createIntroPhotoCancelBtn">선택 취소</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1335,7 +1342,10 @@
 
           <blockquote class="receipt-message-preview" id="receiptMessagePreview"></blockquote>
 
-          <div class="receipt-actions">
+          <div class="receipt-actions" style="display: flex; flex-direction: column; gap: 10px; margin-top: 14px;">
+            <button type="button" class="btn-replay-celebration-action" id="receiptReplayCelebrationBtn" title="토끼 축하 애니메이션 다시보기">
+              <span>🐰 축하 다시보기</span>
+            </button>
             <button type="button" class="btn-primary btn-lg" id="receiptDoneBtn">확인</button>
           </div>
         </div>
@@ -1468,6 +1478,9 @@
                     hidden
                   />
                 </label>
+                <button type="button" class="btn-secondary btn-sm" id="recropGiftPhotoBtn" hidden>
+                  ✂️ 사진 다시 편집
+                </button>
                 <button type="button" class="btn-secondary btn-sm" id="removeGiftPhotoBtn" hidden>
                   🗑️ 사진 삭제
                 </button>
@@ -1777,7 +1790,10 @@
                 </select>
               </div>
 
-              <div class="intro-profile-buttons" style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+              <div class="intro-profile-buttons" style="display: flex; gap: 8px; align-items: center; margin-top: 4px; flex-wrap: wrap;">
+                <button type="button" class="btn-secondary btn-xs" id="profileIntroPhotoRecropBtn" hidden>
+                  ✂️ 사진 다시 편집
+                </button>
                 <button type="button" class="btn-subtle btn-xs" id="profileIntroPhotoDeleteBtn" style="color: #dc2626;">
                   🗑️ 사진 삭제
                 </button>
@@ -2025,11 +2041,88 @@
     </div>
   </div>
 
+  <!-- =====================================================================
+       MODAL: TOUCH-FRIENDLY PHOTO CROP & EDIT (Cropper.js)
+       ===================================================================== -->
+  <div class="photo-crop-modal-backdrop" id="photoCropModalBackdrop" hidden aria-hidden="true">
+    <div class="photo-crop-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="photoCropModalTitle">
+      <div class="crop-modal-header">
+        <div>
+          <span class="crop-modal-eyebrow">PHOTO EDITOR</span>
+          <h3 class="crop-modal-title" id="photoCropModalTitle">사진 자르기 &amp; 편집</h3>
+        </div>
+        <button type="button" class="modal-close-btn" id="closePhotoCropModalBtn" aria-label="편집 취소 및 닫기">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="crop-modal-body">
+        <!-- Viewport & Live Preview Layout -->
+        <div class="crop-viewport-layout">
+          <div class="crop-stage-box" id="cropStageBox">
+            <img id="cropperTargetImg" src="" alt="크롭 대상 사진" />
+          </div>
+          <div class="crop-preview-card">
+            <span class="crop-preview-card-caption">실시간 미리보기</span>
+            <div class="crop-live-preview-box" id="cropLivePreviewBox"></div>
+          </div>
+        </div>
+
+        <!-- Aspect Ratio Selection -->
+        <div class="crop-control-group">
+          <span class="crop-group-label">사진 비율 선택</span>
+          <div class="crop-ratio-pills" role="radiogroup" aria-label="사진 비율 선택">
+            <button type="button" class="crop-ratio-btn active" data-ratio="1" title="1:1 정사각형 비율">1:1 (정사각형)</button>
+            <button type="button" class="crop-ratio-btn" data-ratio="0.8" title="4:5 세로형 비율">4:5 (세로형)</button>
+            <button type="button" class="crop-ratio-btn" data-ratio="1.777777" title="16:9 가로형 비율">16:9 (가로형)</button>
+            <button type="button" class="crop-ratio-btn" data-ratio="free" title="원본 / 자유 비율">원본 비율</button>
+          </div>
+        </div>
+
+        <!-- Zoom Slider & Rotate Toolbar -->
+        <div class="crop-toolbar">
+          <div class="crop-zoom-group">
+            <button type="button" class="crop-tool-btn" id="cropZoomOutBtn" title="축소" aria-label="축소">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+            </button>
+            <input type="range" class="crop-zoom-slider" id="cropZoomSlider" min="0.1" max="3" step="0.02" value="1" aria-label="확대 축소 슬라이더" />
+            <button type="button" class="crop-tool-btn" id="cropZoomInBtn" title="확대" aria-label="확대">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+            </button>
+          </div>
+
+          <div class="crop-rotate-group">
+            <button type="button" class="crop-tool-btn" id="cropRotateLeftBtn" title="왼쪽 90도 회전">↶ -90°</button>
+            <button type="button" class="crop-tool-btn" id="cropRotateRightBtn" title="오른쪽 90도 회전">↷ +90°</button>
+            <button type="button" class="crop-tool-btn" id="cropFlipHBtn" title="좌우 반전">⇄ 반전</button>
+          </div>
+        </div>
+
+        <p class="crop-tip-note">
+          💡 마우스 드래그나 모바일 두 손가락으로 사진의 위치와 크기를 자유롭게 조절할 수 있습니다.
+        </p>
+      </div>
+
+      <div class="crop-modal-footer">
+        <button type="button" class="btn-secondary btn-sm" id="cropResetBtn">🔄 초기화</button>
+        <div class="crop-footer-right">
+          <button type="button" class="btn-subtle btn-sm" id="cropCancelBtn">취소</button>
+          <button type="button" class="btn-primary btn-sm" id="cropApplyBtn">✂️ 자르기 완료</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
   <!-- Supabase JS v2 Client CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Cropper.js for Touch-Friendly Image Crop & Edit -->
+  <script src="cropper.min.js"></script>
   <!-- Main Client-side Application Script -->
   <script src="app.js" defer></script>
 </body>
