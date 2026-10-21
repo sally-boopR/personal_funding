@@ -1,0 +1,1700 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <title>personal_funding — 나만의 생일 선물 위시리스트 &amp; 펀딩</title>
+  <meta name="application-name" content="personal_funding" />
+  <meta name="description" content="personal_funding — 회원가입 없이 이름과 관리 비밀번호만으로 누구나 나만의 생일 선물 위시리스트 펀딩 페이지를 만들고 친구들과 공유하는 서비스" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="personal_funding" />
+  <meta property="og:title" content="personal_funding — 나만의 생일 선물 위시리스트 &amp; 펀딩" />
+  <meta property="og:description" content="회원가입 없이 이름과 관리 비밀번호(8자 이상)만으로 나만의 생일 선물 펀딩 페이지를 만들고 친구들과 마음을 모아보세요." />
+  <!-- Pretendard & Editorial Fonts -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Prevent Flash of Main Content Before Intro Overlay -->
+  <script>
+    (function () {
+      try {
+        var params = new URLSearchParams(window.location.search);
+        var fid = (params.get('f') || '').trim();
+        if (!fid) {
+          document.documentElement.classList.add('intro-skipped');
+          return;
+        }
+        var seen = sessionStorage.getItem('bday_intro_seen_v2_' + fid) === '1';
+        var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (seen || reduced) {
+          document.documentElement.classList.add('intro-skipped');
+        } else {
+          document.documentElement.classList.add('intro-active');
+        }
+      } catch (e) {
+        document.documentElement.classList.add('intro-skipped');
+      }
+    })();
+  </script>
+</head>
+<body>
+  <!-- =====================================================================
+       FULLSCREEN BIRTHDAY CELEBRATION INTRO OVERLAY (3.6s Auto Transition)
+       ===================================================================== -->
+  <div class="birthday-intro-overlay" id="birthdayIntroOverlay" role="dialog" aria-label="생일 축하 인트로 화면" hidden>
+    <!-- Ambient Soft Bokeh & Glow Backdrop -->
+    <div class="intro-ambient-glow" aria-hidden="true">
+      <span class="intro-orb orb-1"></span>
+      <span class="intro-orb orb-2"></span>
+      <span class="intro-orb orb-3"></span>
+    </div>
+
+    <!-- Real-Time Fireworks, Hearts, Sparkles & Confetti Canvas -->
+    <canvas id="introFireworksCanvas" aria-hidden="true"></canvas>
+
+    <!-- Top-Right Skip Button -->
+    <button type="button" class="intro-skip-btn" id="skipIntroBtn" aria-label="인트로 건너뛰기">
+      <span>건너뛰기</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="9 18 15 12 9 6"></polyline>
+      </svg>
+    </button>
+
+    <!-- Center Typography Sequence -->
+    <div class="intro-center-stage">
+      <div class="intro-crown-badge" aria-hidden="true">
+        <span class="intro-sparkle-dot">✦</span>
+        <span class="intro-date-tag" id="introDateTag">PERSONAL_FUNDING · SPECIAL BIRTHDAY</span>
+        <span class="intro-sparkle-dot">✦</span>
+      </div>
+
+      <figure class="intro-character-frame" id="introPhotoFrame">
+        <img
+          src="./intro-character.png"
+          alt="생일 축하 인트로 사진"
+          class="intro-character-img"
+          id="introPhotoImg"
+          data-default-src="./intro-character.png"
+        />
+      </figure>
+
+      <h1 class="intro-en-title" aria-label="Happy Birthday!">
+        Happy Birthday!
+      </h1>
+
+      <div class="intro-divider-ornament" aria-hidden="true">
+        <span class="ornament-line"></span>
+        <span class="ornament-heart">♡</span>
+        <span class="ornament-line"></span>
+      </div>
+
+      <p class="intro-kr-title" id="introKrTitle">
+        생일 축하해 <span class="intro-heart-beat" aria-hidden="true">♡</span>
+      </p>
+
+      <p class="intro-sub-caption" id="introSubCaption">
+        소중한 마음을 담은 생일 위시리스트가 열립니다
+      </p>
+    </div>
+  </div>
+
+  <!-- Celebration Confetti Canvas Overlay (Used on Main Page Approval) -->
+  <canvas id="confettiCanvas" aria-hidden="true"></canvas>
+
+  <!-- Top Navigation Header (Mobile-First Compact + Desktop Wide) -->
+  <header class="top-nav">
+    <div class="container nav-inner">
+      <!-- Left: Compact Brand Logo & Title -->
+      <div class="brand" id="brandHome" role="button" tabindex="0" aria-label="홈으로 이동">
+        <span class="brand-badge" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 12 20 22 4 22 4 12"></polyline>
+            <rect x="2" y="7" width="20" height="5" rx="1"></rect>
+            <line x1="12" y1="22" x2="12" y2="7"></line>
+            <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
+            <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
+          </svg>
+        </span>
+        <div class="brand-text">
+          <span class="brand-title" id="topBrandTitle">personal_funding</span>
+          <span class="brand-sub" id="topBrandSub">나만의 생일 선물 위시리스트</span>
+        </div>
+      </div>
+
+      <!-- Center: Desktop Section Links (Shown when viewing a specific funding) -->
+      <nav class="nav-links" id="fundingNavLinks" aria-label="주요 섹션 이동" hidden>
+        <a href="#heroSection" class="nav-link active">생일 홈</a>
+        <a href="#wishlistSection" class="nav-link">위시리스트 <span class="nav-count" id="navGiftCount">0</span></a>
+        <a href="#guestbookSection" class="nav-link">
+          축하 메시지
+          <span class="nav-count" id="navMessageCount">0</span>
+          <span class="nav-pending-badge" id="navPendingBadge" hidden>대기 0</span>
+        </a>
+      </nav>
+
+      <!-- Right: Desktop Action Buttons (Hidden on Mobile) -->
+      <div class="nav-actions desktop-only-actions">
+        <!-- Cloud DB Sync Status Pill -->
+        <button type="button" class="btn-toss-config btn-sm" id="cloudSyncStatusBtn" title="개발용 Supabase 데이터베이스 연결 상태">
+          <span class="toss-dot" id="cloudSyncDot"></span>
+          <span id="cloudSyncStatusText">DB 연결 확인 중</span>
+        </button>
+
+        <!-- Copy Share URL Button (Shown when viewing a funding) -->
+        <button type="button" class="btn-secondary btn-sm funding-only-ui" id="topShareUrlBtn" title="이 펀딩의 공유 링크 복사" hidden>
+          🔗 공유 링크 복사
+        </button>
+
+        <!-- Owner Auth Login / Mode Button (Shown when viewing a funding) -->
+        <button type="button" class="btn-outline-accent btn-sm funding-only-ui" id="openAdminAuthBtn" title="펀딩 주인 비밀번호 인증" hidden>
+          <span id="adminAuthBtnText">🔐 펀딩 주인 로그인</span>
+        </button>
+
+        <!-- Admin-Only Quick Gift Add Button -->
+        <button type="button" class="btn-outline-accent btn-sm admin-only-ui" id="topAddGiftBtn" hidden>
+          + 선물 추가
+        </button>
+
+        <!-- Go to Create My Own Funding Button -->
+        <button type="button" class="btn-primary btn-sm funding-only-ui" id="topCreateNewFundingBtn" hidden>
+          ✨ 나도 펀딩 만들기
+        </button>
+
+        <div class="dropdown-wrap funding-only-ui" id="desktopMenuDropdownWrap" hidden>
+          <button type="button" class="btn-icon-text" id="dataMenuBtn" aria-expanded="false" aria-haspopup="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <span>메뉴</span>
+          </button>
+          <div class="dropdown-menu" id="dataDropdownMenu" hidden>
+            <div class="dropdown-header">방문자 &amp; 펀딩 주인 메뉴</div>
+            <button type="button" class="dropdown-item" id="dropdownShareFundingBtn">
+              🔗 이 펀딩 공유 URL 복사
+            </button>
+            <button type="button" class="dropdown-item" id="dropdownAdminAuthBtn">
+              🔐 펀딩 주인 비밀번호 인증 / DB 설정
+            </button>
+            <button type="button" class="dropdown-item" id="replayIntroBtn">
+              🎆 생일 축하 인트로 다시 보기
+            </button>
+            <button type="button" class="dropdown-item" id="dropdownGoCreateBtn">
+              ✨ 나만의 새 생일 펀딩 만들기
+            </button>
+            <div class="admin-only-ui" id="dropdownAdminActionsGroup" hidden>
+              <hr class="dropdown-divider" />
+              <div class="dropdown-header">펀딩 주인 전용 관리</div>
+              <button type="button" class="dropdown-item" id="dropdownTossSettingBtn">
+                💳 송금 링크 · 계좌 · 펀딩 프로필 설정
+              </button>
+              <button type="button" class="dropdown-item" id="exportJsonBtn">
+                📥 내 펀딩 데이터 백업 (.json 저장)
+              </button>
+              <hr class="dropdown-divider" />
+              <button type="button" class="dropdown-item danger" id="resetCleanBtn">
+                🔄 이 펀딩 참여 내역 비우기 (0원 초기화)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right on Mobile: Compact Hamburger Menu Trigger Button -->
+      <div class="mobile-menu-trigger-wrap">
+        <span class="mobile-pending-dot" id="mobilePendingDot" hidden></span>
+        <button
+          type="button"
+          class="btn-mobile-menu"
+          id="mobileMenuToggleBtn"
+          aria-expanded="false"
+          aria-controls="mobileNavDrawer"
+          aria-label="메뉴 열기"
+        >
+          <svg id="hamburgerIcon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+          <span>메뉴</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Collapsible Navigation & Management Drawer -->
+    <div class="mobile-nav-drawer" id="mobileNavDrawer" hidden>
+      <div class="container mobile-drawer-inner">
+        <div class="mobile-drawer-links funding-only-ui" id="mobileFundingLinksGroup" hidden>
+          <a href="#heroSection" class="mobile-drawer-link" data-close-drawer="true" id="mobileHomeNavLink">🎂 생일 펀딩 홈</a>
+          <a href="#wishlistSection" class="mobile-drawer-link" data-close-drawer="true">
+            🎁 선물 위시리스트
+            <span class="nav-count" id="mobileNavGiftCount">0</span>
+          </a>
+          <a href="#guestbookSection" class="mobile-drawer-link" data-close-drawer="true">
+            💌 축하 메시지 &amp; 참여현황
+            <span class="nav-count" id="mobileNavMessageCount">0</span>
+          </a>
+        </div>
+
+        <div class="mobile-drawer-actions">
+          <button type="button" class="btn-secondary mobile-action-btn funding-only-ui" id="mobileShareUrlBtn" hidden>
+            🔗 이 펀딩 공유 URL 복사
+          </button>
+          <button type="button" class="btn-secondary mobile-action-btn" id="mobileAdminAuthBtn">
+            🔐 펀딩 주인 로그인 / Supabase DB 설정
+          </button>
+          <button type="button" class="btn-primary mobile-action-btn admin-only-ui" id="mobileAddGiftBtn" hidden>
+            + 새 위시리스트 선물 추가 (주인)
+          </button>
+          <button type="button" class="btn-secondary mobile-action-btn admin-only-ui" id="mobileRemitConfigBtn" hidden>
+            💳 송금 링크 · 계좌 · 프로필 수정 (주인)
+          </button>
+          <button type="button" class="btn-outline-accent mobile-action-btn funding-only-ui" id="mobileGoCreateFundingBtn" hidden>
+            ✨ 나만의 새 생일 펀딩 만들기
+          </button>
+        </div>
+
+        <div class="mobile-drawer-subactions funding-only-ui" id="mobileFundingSubactions" hidden>
+          <button type="button" class="btn-ghost-sm" id="mobileReplayIntroBtn">🎆 인트로 보기</button>
+          <button type="button" class="btn-ghost-sm admin-only-ui" id="mobileExportJsonBtn" hidden>데이터 백업(.json)</button>
+          <button type="button" class="btn-ghost-sm text-danger admin-only-ui" id="mobileResetCleanBtn" hidden>0원 초기화</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Pending Deposit Notification Bar for Funding Owner -->
+  <div class="pending-alert-banner admin-only-ui" id="pendingAlertBanner" hidden>
+    <div class="container pending-alert-inner">
+      <div class="pending-alert-text">
+        <span class="pending-badge-pill">펀딩 주인 · 입금 확인 대기</span>
+        <span>승인 대기 중인 송금 내역이 <strong id="bannerPendingCount">0건</strong>(<strong id="bannerPendingAmount">₩0</strong>) 있습니다.</span>
+      </div>
+      <a href="#guestbookSection" class="btn-secondary btn-sm" id="jumpToPendingBtn">대기 내역 승인하기 ↓</a>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       VIEW A: CREATE MY BIRTHDAY FUNDING LANDING VIEW (When no ?f=ID)
+       ===================================================================== -->
+  <section class="create-funding-landing container" id="createFundingView" hidden>
+    <div class="create-landing-grid">
+      <!-- Left: Intro & Security Notice Card -->
+      <div class="create-intro-col">
+        <div class="hero-eyebrow-row">
+          <span class="pill-exclusive">personal_funding</span>
+          <span class="pill-dday">NO SIGN-UP</span>
+        </div>
+
+        <h1 class="create-hero-title">
+          누구나 1분 만에 만드는<br />
+          <span>나만의 생일 선물 펀딩</span>
+        </h1>
+        <p class="create-hero-desc">
+          <strong>personal_funding</strong>은 회원가입이나 이메일 인증 없이 <strong>이름과 관리 비밀번호(8자 이상)</strong>만 입력하면 고유 펀딩 주소가 발급되는 간편 선물 펀딩 서비스입니다. 받고 싶은 선물과 사진을 올리고 친구들에게 공유해 보세요!
+        </p>
+
+        <!-- ★ 1. 필수 보안 안내창 (요구사항 반영) -->
+        <div class="security-warning-card" role="region" aria-label="보안 안내">
+          <div class="security-warning-title">⚠️ 보안 안내</div>
+          <p class="security-warning-p highlight">
+            다른 사이트에서 사용 중인 아이디나 비밀번호를 사용하지 마세요. 관리 비밀번호는 복구하거나 초기화할 수 없습니다. 비밀번호를 잊어버리면 펀딩 관리 권한을 잃게 됩니다.
+          </p>
+          <p class="security-warning-p">
+            본 서비스(<strong>personal_funding</strong>)는 별도의 회원가입이나 이메일 인증 없이 이용하는 간편 펀딩 서비스입니다. 보안을 위해 다른 사이트에서 평소 사용하는 아이디나 비밀번호를 절대 재사용하지 마시고, 이 서비스에서만 사용할 새로운 이름(관리용 식별자)과 비밀번호(8자 이상)를 설정하는 것을 권장합니다.
+          </p>
+        </div>
+
+        <!-- ★ 2. 비밀번호 분실 주의 안내창 (비밀번호 복구 기능 없음) -->
+        <div class="password-no-recovery-card" role="note" aria-label="비밀번호 보관 주의사항">
+          <div class="no-recovery-badge">🔒 비밀번호 찾기 · 초기화 불가 안내</div>
+          <p class="no-recovery-main-copy">
+            관리 비밀번호를 잊어버리면 펀딩을 다시 관리할 수 없습니다. 반드시 기억하거나 안전한 곳에 보관해 주세요.
+          </p>
+          <ul class="no-recovery-list">
+            <li>비밀번호 찾기 기능 없음 · 복구 코드 발급 기능 없음</li>
+            <li>이메일 인증 및 재설정 기능 없음 · 비밀번호 초기화 기능 없음</li>
+          </ul>
+        </div>
+
+        <!-- Go to Existing Funding ID Box & Recent Fundings on This Device -->
+        <div class="existing-funding-Jump-card">
+          <label class="form-label" for="jumpFundingIdInput">🔗 이미 공유받은 펀딩 주소나 고유 ID가 있나요?</label>
+          <form id="jumpFundingForm" class="jump-funding-row" novalidate>
+            <input
+              type="text"
+              id="jumpFundingIdInput"
+              class="form-input"
+              placeholder="펀딩 고유 ID (예: f-1a2b3c4d5e) 또는 공유 URL 붙여넣기"
+            />
+            <button type="submit" class="btn-secondary">펀딩 보러가기 →</button>
+          </form>
+
+          <div id="recentFundingsWrap" hidden style="margin-top: 14px;">
+            <div class="form-label-xs" style="margin-bottom: 6px;">📌 이 기기에서 최근 만들거나 방문한 펀딩</div>
+            <div class="recent-fundings-list" id="recentFundingsList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Create Funding Form / Created URL Result Card -->
+      <div class="create-form-col">
+        <!-- Step 1: Creation Form -->
+        <div class="create-form-card" id="createFundingFormBox">
+          <div class="modal-header" style="margin-bottom: 16px;">
+            <span class="modal-eyebrow">personal_funding · CREATE MY FUNDING</span>
+            <h2 class="modal-title">새 생일 펀딩 페이지 만들기</h2>
+            <p class="modal-subtitle">이름과 관리 비밀번호(8자 이상)만 입력하면 즉시 나만의 공유 URL이 발급됩니다.</p>
+          </div>
+
+          <form id="createFundingForm" novalidate>
+            <!-- Honeypot field against bots (hidden from humans) -->
+            <div style="position: absolute; left: -9999px; opacity: 0; pointer-events: none;" aria-hidden="true">
+              <label for="createHoneypotInput">Website</label>
+              <input type="text" id="createHoneypotInput" name="website_url" tabindex="-1" autocomplete="off" />
+            </div>
+
+            <div class="form-row-2col">
+              <div class="form-group">
+                <label class="form-label" for="createHostNameInput">1. 생일 주인공 이름 (필수)</label>
+                <input
+                  type="text"
+                  id="createHostNameInput"
+                  class="form-input"
+                  placeholder="예: 김민지, 지훈"
+                  maxlength="24"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="createBirthdayDateInput">2. 생일 날짜</label>
+                <input
+                  type="date"
+                  id="createBirthdayDateInput"
+                  class="form-input"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="form-row-2col">
+              <div class="form-group">
+                <label class="form-label" for="createAdminPasswordInput">3. 관리 비밀번호 설정 (8자 이상)</label>
+                <input
+                  type="password"
+                  id="createAdminPasswordInput"
+                  class="form-input"
+                  placeholder="이 펀딩 전용 새 비밀번호 (8자 이상)"
+                  minlength="8"
+                  maxlength="64"
+                  autocomplete="new-password"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="createAdminPasswordConfirmInput">4. 관리 비밀번호 확인 (8자 이상)</label>
+                <input
+                  type="password"
+                  id="createAdminPasswordConfirmInput"
+                  class="form-input"
+                  placeholder="비밀번호 한 번 더 입력"
+                  minlength="8"
+                  maxlength="64"
+                  autocomplete="new-password"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="inline-password-alert">
+              ⚠️ <strong>다른 사이트에서 사용 중인 아이디나 비밀번호를 사용하지 마세요. 관리 비밀번호는 복구하거나 초기화할 수 없습니다. 비밀번호를 잊어버리면 펀딩 관리 권한을 잃게 됩니다.</strong>
+            </div>
+
+            <div class="form-row-2col" style="margin-top: 12px;">
+              <div class="form-group">
+                <label class="form-label" for="createEmojiSelect">대표 아이콘</label>
+                <select id="createEmojiSelect" class="form-select">
+                  <option value="🎂">🎂 생일 케이크</option>
+                  <option value="👑">👑 오늘의 주인공</option>
+                  <option value="🌷">🌷 봄날의 튤립</option>
+                  <option value="🧸">🧸 포근한 테디베어</option>
+                  <option value="🥂">🥂 샴페인 건배</option>
+                  <option value="🎀">🎀 러블리 리본</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="createHeadlineInput">페이지 제목 (선택)</label>
+                <input
+                  type="text"
+                  id="createHeadlineInput"
+                  class="form-input"
+                  placeholder="미입력 시 '{이름}의 생일 선물 펀딩'"
+                  maxlength="45"
+                />
+              </div>
+            </div>
+
+            <!-- Optional Initial Remittance Setup -->
+            <details class="optional-remit-details">
+              <summary>💳 송금 받을 계좌번호 · 카카오페이 · 토스 링크 미리 입력하기 (선택 — 생성 후에도 수정 가능)</summary>
+              <div class="optional-remit-body">
+                <div class="form-row-2col">
+                  <div class="form-group">
+                    <label class="form-label" for="createBankNameInput">은행명</label>
+                    <input type="text" id="createBankNameInput" class="form-input" placeholder="예: 카카오뱅크, 토스뱅크" maxlength="24" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="createBankAccountInput">계좌번호</label>
+                    <input type="text" id="createBankAccountInput" class="form-input" placeholder="예: 3333-01-2345678" maxlength="40" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="createKakaoUrlInput">💛 카카오페이 송금 링크 URL (선택)</label>
+                  <input type="url" id="createKakaoUrlInput" class="form-input" placeholder="https://qr.kakaopay.com/..." />
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" for="createTossUrlInput">💙 토스 송금 링크 URL (선택)</label>
+                  <input type="url" id="createTossUrlInput" class="form-input" placeholder="https://toss.me/..." />
+                </div>
+              </div>
+            </details>
+
+            <!-- Optional Intro Frame Photo Setup -->
+            <details class="optional-remit-details" style="margin-top: 10px;">
+              <summary>🖼️ 인트로 액자 사진 1장 등록하기 (선택 — 생성 후에도 변경 가능)</summary>
+              <div class="optional-remit-body">
+                <div class="form-group" style="margin-bottom: 8px;">
+                  <label class="form-label" for="createIntroPhotoInput">
+                    주인공 사진 업로드 (JPG·PNG·WebP, 최대 5MB)
+                  </label>
+                  <input
+                    type="file"
+                    id="createIntroPhotoInput"
+                    class="form-input"
+                    accept="image/jpeg,image/png,image/webp"
+                  />
+                  <p class="form-help-text" style="margin-top: 4px; font-size: 12px; color: var(--text-muted);">
+                    생일 인트로 축하 화면 중앙 액자에 표시됩니다. 미등록 시 기본 축하 일러스트가 표시됩니다.
+                  </p>
+                </div>
+
+                <div id="createIntroPhotoPreviewWrap" class="intro-preview-wrap" hidden>
+                  <div class="intro-preview-img-container">
+                    <img id="createIntroPhotoPreviewImg" class="intro-preview-thumbnail" alt="인트로 사진 미리보기" />
+                  </div>
+                  <div class="intro-preview-controls">
+                    <div class="form-group" style="margin-bottom: 6px;">
+                      <label class="form-label" for="createIntroPhotoFitSelect" style="font-size: 12px;">액자 맞춤 방식</label>
+                      <select id="createIntroPhotoFitSelect" class="form-select form-select-sm">
+                        <option value="cover" selected>액자 채우기 (여백 없이 꽉 채움)</option>
+                        <option value="contain">전체 보기 (사진 전체가 보이도록 맞춤)</option>
+                      </select>
+                    </div>
+                    <button type="button" class="btn-subtle btn-xs" id="createIntroPhotoCancelBtn">선택 취소</button>
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            <!-- Security Notice Confirmation Checkbox -->
+            <div class="security-confirm-check-box">
+              <label class="consent-checkbox-label">
+                <input type="checkbox" id="createSecurityConfirmCheck" required />
+                <span>
+                  <strong>[필수 확인]</strong> 다른 사이트에서 사용 중인 아이디나 비밀번호를 사용하지 않으며, 관리 비밀번호는 복구하거나 초기화할 수 없고 분실 시 펀딩 관리 권한을 잃게 된다는 안내를 확인했습니다.
+                </span>
+              </label>
+            </div>
+
+            <div class="form-error-msg" id="createFundingErrorMsg" hidden></div>
+
+            <button type="submit" class="btn-primary btn-lg" id="createFundingSubmitBtn" style="width: 100%; margin-top: 12px;">
+              ✨ 내 생일 펀딩 만들기 &amp; 고유 URL 발급받기
+            </button>
+          </form>
+        </div>
+
+        <!-- Step 2: Created Success & Share URL Box -->
+        <div class="create-form-card" id="createdUrlSuccessBox" hidden>
+          <div class="receipt-card" style="padding: 8px 4px;">
+            <span class="receipt-status-pill">🎉 펀딩 생성 완료 · 주인 로그인 상태</span>
+            <h3 class="receipt-title" id="createdSuccessTitle">나만의 생일 펀딩이 만들어졌습니다!</h3>
+            <p class="receipt-subtitle">
+              아래 <strong>고유 공유 URL</strong>을 복사해 카카오톡·인스타그램 프로필에 공유하고, 내 페이지에서 받고 싶은 선물 사진과 금액을 자유롭게 수정해 보세요.
+            </p>
+
+            <div class="issued-url-box">
+              <div class="issued-url-meta">
+                <span>발급된 고유 펀딩 ID:</span>
+                <strong id="issuedFundingIdText">-</strong>
+              </div>
+              <div class="issued-url-row">
+                <input type="text" id="issuedShareUrlInput" class="form-input" readonly />
+                <button type="button" class="btn-primary btn-sm" id="copyIssuedUrlBtn">🔗 URL 복사</button>
+              </div>
+            </div>
+
+            <div class="password-no-recovery-card" style="text-align: left; margin-bottom: 18px;">
+              <div class="no-recovery-badge">⚠️ 필수 보관 안내</div>
+              <p class="no-recovery-main-copy" style="margin-bottom: 4px;">
+                관리 비밀번호를 잊어버리면 펀딩을 다시 관리할 수 없습니다. 반드시 기억하거나 안전한 곳에 보관해 주세요.
+              </p>
+              <p style="font-size: 0.82rem; color: var(--text-secondary);">
+                ※ 위 <strong>공유 URL</strong>과 방금 설정한 <strong>관리 비밀번호</strong>를 지금 메모장이나 나와의 채팅방에 꼭 저장해 두세요.
+              </p>
+            </div>
+
+            <div class="receipt-actions" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+              <button type="button" class="btn-secondary btn-lg" id="copyIssuedUrlAgainBtn">📋 공유 링크 복사하기</button>
+              <button type="button" class="btn-primary btn-lg" id="goMyCreatedFundingBtn">🎂 내 펀딩 페이지로 이동 (선물 등록하기) →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =====================================================================
+       VIEW B: INDIVIDUAL FUNDING PAGE VIEW (When ?f=funding_id is active)
+       ===================================================================== -->
+  <main class="main-content" id="fundingPageView" hidden>
+    <!-- 1. Hero Celebration Banner -->
+    <section class="hero-section container" id="heroSection">
+      <div class="hero-grid">
+        <!-- Left Column: Birthday Host Profile -->
+        <div class="hero-story-card">
+          <div class="hero-eyebrow-row">
+            <span class="pill-exclusive" id="heroExclusivePill">personal_funding</span>
+            <span class="pill-dday" id="heroDdayBadge">D-DAY</span>
+            <span class="pill-date" id="heroDateBadge">생일 날짜</span>
+            <button type="button" class="btn-ghost-xs admin-only-ui" id="quickEditCampaignBtn" title="펀딩 주인: 생일 정보 및 송금 설정 수정" hidden>
+              ✏️ 설정 수정
+            </button>
+          </div>
+
+          <div class="hero-profile-header">
+            <div class="avatar-ring-wrap">
+              <div class="hero-avatar" id="heroAvatarDisplay" aria-hidden="true">🎂</div>
+              <span class="avatar-sparkle">✨</span>
+            </div>
+            <div class="hero-title-group">
+              <p class="hero-subtitle" id="heroSubtitle">소중한 마음을 모으는 생일 위시리스트</p>
+              <h1 class="hero-title" id="heroTitle">생일 선물 펀딩</h1>
+            </div>
+          </div>
+
+          <p class="hero-description" id="heroBio">
+            받고 싶은 위시리스트에 원하는 금액만큼 마음을 보태주세요. 프로필 사진과 축하 메시지를 남기고 송금 후 「송금했어요」를 눌러주시면 입금 확인을 거쳐 달성률에 반영됩니다.
+          </p>
+
+          <div class="hero-cta-group">
+            <button type="button" class="btn-primary btn-lg" id="heroMainPledgeBtn">
+              <span id="heroMainPledgeBtnText">💝 선물 펀딩 참여하기</span>
+            </button>
+            <button type="button" class="btn-secondary btn-lg" id="heroShareFundingBtn">
+              <span>🔗 펀딩 링크 공유</span>
+            </button>
+            <button type="button" class="btn-secondary btn-lg admin-only-ui" id="heroAddGiftBtn" hidden>
+              <span>+ 위시리스트 선물 추가</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Right Column: Live Crowdfunding Thermometer & Metrics -->
+        <aside class="hero-stats-card" aria-label="생일 펀딩 달성 현황">
+          <div class="stats-top-row">
+            <div class="stats-text-col">
+              <span class="stats-label">현재 입금 확인된 모금액</span>
+              <div class="stats-total-amount" id="heroTotalRaised">₩0</div>
+              <div class="stats-goal-sub">
+                총 목표 <strong id="heroTotalGoal">₩0</strong>
+                <span class="stats-remaining" id="heroRemainingText">₩0 남음</span>
+              </div>
+              <div class="stats-pending-sub" id="heroPendingSubText">
+                입금 확인 대기: 0건 (₩0)
+              </div>
+            </div>
+
+            <!-- SVG Circular Ring Indicator -->
+            <div class="ring-chart-wrap" aria-hidden="true">
+              <svg class="progress-ring" width="88" height="88" viewBox="0 0 96 96">
+                <circle class="progress-ring-bg" cx="48" cy="48" r="40" stroke-width="8" fill="transparent" />
+                <circle class="progress-ring-fill" id="heroRingCircle" cx="48" cy="48" r="40" stroke-width="8" fill="transparent" stroke-dasharray="251.32" stroke-dashoffset="251.32" />
+              </svg>
+              <div class="ring-chart-label">
+                <span class="ring-percent" id="heroPercentText">0%</span>
+                <span class="ring-caption">달성률</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Linear Thermometer Bar -->
+          <div class="hero-bar-container">
+            <div class="hero-bar-track">
+              <div class="hero-bar-fill" id="heroLinearBar" style="width: 0%"></div>
+            </div>
+            <div class="hero-bar-milestones">
+              <span>0%</span>
+              <span>50%</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          <!-- 3 Key Metrics Grid -->
+          <div class="hero-kpi-grid">
+            <div class="kpi-box">
+              <span class="kpi-label">참여 완료</span>
+              <strong class="kpi-value" id="kpiBackerCount">0명</strong>
+            </div>
+            <div class="kpi-box">
+              <span class="kpi-label">달성 선물</span>
+              <strong class="kpi-value" id="kpiCompletedGifts">0 / 0개</strong>
+            </div>
+            <div class="kpi-box">
+              <span class="kpi-label">확인 대기</span>
+              <strong class="kpi-value kpi-pending-val" id="kpiPendingCount">0건</strong>
+            </div>
+          </div>
+
+          <!-- Recent Supporters Circular Avatar Strip -->
+          <div class="recent-supporters-box" id="recentSupportersBox">
+            <div class="supporters-avatars" id="supportersAvatarStack"></div>
+            <p class="supporters-copy" id="supportersSummaryText">첫 번째로 생일 축하 마음을 전해보세요!</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- 2. Wishlist Gift Funding Grid -->
+    <section class="wishlist-section container" id="wishlistSection">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <span class="section-eyebrow" id="wishlistEyebrow">BIRTHDAY WISHLIST</span>
+          <h2 class="section-title" id="wishlistSectionTitle">선물 위시리스트</h2>
+          <p class="section-desc">원하는 선물을 선택해 원하는 금액만큼 마음을 보탤 수 있습니다.</p>
+        </div>
+
+        <div class="section-controls">
+          <div class="filter-tabs" role="tablist" aria-label="위시리스트 필터">
+            <button type="button" class="filter-tab active" data-filter="all" role="tab" aria-selected="true">전체</button>
+            <button type="button" class="filter-tab" data-filter="funding" role="tab" aria-selected="false">진행 중</button>
+            <button type="button" class="filter-tab" data-filter="completed" role="tab" aria-selected="false">달성 완료</button>
+          </div>
+
+          <div class="sort-Action-wrap">
+            <select id="giftSortSelect" class="select-control" aria-label="선물 정렬 기준">
+              <option value="priority">우선순위순</option>
+              <option value="progress-desc">달성률 높은순</option>
+              <option value="remaining-asc">남은 금액 적은순</option>
+              <option value="price-asc">목표 금액 낮은순</option>
+            </select>
+            <button type="button" class="btn-outline-accent admin-only-ui" id="addGiftInlineBtn" hidden>
+              + 선물 등록
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gift Cards Grid -->
+      <div class="wishlist-grid" id="wishlistGrid">
+        <!-- Populated dynamically by app.js -->
+      </div>
+    </section>
+
+    <!-- 3. Participant Avatar Roster & Blessing Wall Feed -->
+    <section class="guestbook-section container" id="guestbookSection">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <span class="section-eyebrow">PARTICIPANTS &amp; MESSAGES</span>
+          <h2 class="section-title">펀딩 참여자 &amp; 축하 메시지</h2>
+          <p class="section-desc">
+            참여 시 등록한 프로필 사진과 축하 메시지가 함께 표시됩니다. 본인 프로필 사진은 등록 시 설정한 비밀번호로 언제든 변경·삭제할 수 있습니다.
+          </p>
+        </div>
+
+        <div class="guestbook-controls">
+          <div class="filter-tabs" role="tablist" aria-label="입금 상태별 필터">
+            <button type="button" class="status-filter-tab active" data-status-filter="all">전체</button>
+            <button type="button" class="status-filter-tab" data-status-filter="pending">입금 대기</button>
+            <button type="button" class="status-filter-tab" data-status-filter="approved">승인 완료</button>
+          </div>
+
+          <div class="search-input-wrap">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="search" id="messageSearchInput" placeholder="이름 또는 메시지 검색..." aria-label="축하 메시지 검색" />
+          </div>
+
+          <select id="messageGiftFilter" class="select-control" aria-label="선물별 메시지 필터">
+            <option value="all">모든 선물 내역</option>
+          </select>
+
+          <button type="button" class="btn-secondary" id="openMessageOnlyModalBtn">
+            💌 펀딩 참여하기
+          </button>
+        </div>
+      </div>
+
+      <!-- Horizontal Circular Participant Roster -->
+      <div class="participant-roster-card" id="participantRosterCard" hidden>
+        <div class="roster-header">
+          <span class="roster-title">💝 함께 마음을 모은 친구들</span>
+          <span class="roster-sub" id="rosterCountText">0명 참여</span>
+        </div>
+        <div class="participant-roster-scroll" id="participantRosterList">
+          <!-- Populated dynamically by app.js -->
+        </div>
+      </div>
+
+      <!-- Blessing Wall Cards -->
+      <div class="blessing-grid" id="blessingGrid">
+        <!-- Populated dynamically by app.js -->
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-left">
+        <div class="footer-brand">
+          <span class="brand-badge sm">🎁</span>
+          <strong id="footerBrandTitle">personal_funding — 나만의 생일 선물 위시리스트 &amp; 펀딩</strong>
+        </div>
+        <p class="footer-note" id="footerStorageStatusNote">
+          personal_funding — 누구나 이름과 관리 비밀번호만으로 나만의 생일 선물 위시리스트 펀딩을 만들 수 있습니다.
+        </p>
+      </div>
+      <div class="footer-right" style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button type="button" class="btn-ghost-sm" id="footerGoCreateBtn">
+          ✨ 나만의 펀딩 만들기
+        </button>
+        <button type="button" class="btn-ghost-sm funding-only-ui" id="printSummaryBtn" hidden>
+          🖨️ 내역 인쇄
+        </button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- =====================================================================
+       MODAL 1: CONTRIBUTION / PLEDGE MODAL (With Circular Profile Photo Upload)
+       ===================================================================== -->
+  <div class="modal-backdrop" id="pledgeModalBackdrop" hidden aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="dialog" aria-modal="true" aria-labelledby="pledgeModalTitle">
+      <button type="button" class="modal-close-btn" id="closePledgeModalBtn" aria-label="모달 닫기">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+
+      <!-- Step 1: Contribution & Remittance View -->
+      <div id="pledgeFormView">
+        <div class="modal-header">
+          <span class="modal-eyebrow" id="pledgeModalEyebrow">GIFT FUNDING</span>
+          <h3 class="modal-title" id="pledgeModalTitle">생일 선물 펀딩하기</h3>
+          <p class="modal-subtitle" id="pledgeModalSubtitle">선물과 금액, 프로필 사진 및 축하 메시지를 입력한 뒤 송금해 주세요.</p>
+        </div>
+
+        <form id="pledgeForm" novalidate>
+          <!-- Honeypot field against bots -->
+          <div style="position: absolute; left: -9999px; opacity: 0; pointer-events: none;" aria-hidden="true">
+            <label for="pledgeHoneypotInput">Comment URL</label>
+            <input type="text" id="pledgeHoneypotInput" tabindex="-1" autocomplete="off" />
+          </div>
+
+          <!-- 1. Target Gift Selector -->
+          <div class="form-group">
+            <label class="form-label" for="pledgeGiftSelect">1. 원하는 선물 선택</label>
+            <select id="pledgeGiftSelect" class="form-select" required>
+              <!-- Populated dynamically -->
+            </select>
+            <!-- Selected Gift Mini Status Preview -->
+            <div class="selected-gift-preview" id="selectedGiftPreview">
+              <div class="sgp-info">
+                <span class="sgp-icon" id="sgpIcon">🎁</span>
+                <div class="sgp-text">
+                  <strong id="sgpTitle">선물 이름</strong>
+                  <span id="sgpStatusText">현재 승인액 ₩0 / 목표 ₩0 (남은 금액 ₩0)</span>
+                </div>
+              </div>
+              <button type="button" class="btn-fill-remaining" id="fillRemainingBtn">
+                남은 금액 전액 채우기
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. Pledge Amount Selector -->
+          <div class="form-group">
+            <div class="label-row">
+              <label class="form-label" for="pledgeAmountInput">2. 펀딩 금액 입력 (원)</label>
+              <span class="amount-helper" id="pledgeImpactBadge">입금 승인 시 달성률 +0%</span>
+            </div>
+
+            <!-- Quick Preset Chips -->
+            <div class="preset-chips" role="group" aria-label="빠른 금액 선택">
+              <button type="button" class="chip-btn" data-amount="10000">+1만원</button>
+              <button type="button" class="chip-btn" data-amount="30000">+3만원</button>
+              <button type="button" class="chip-btn" data-amount="50000">+5만원</button>
+              <button type="button" class="chip-btn" data-amount="100000">+10만원</button>
+              <button type="button" class="chip-btn" data-amount="max">100% 채우기</button>
+              <button type="button" class="chip-btn chip-reset" data-amount="reset">초기화</button>
+            </div>
+
+            <div class="currency-input-wrap">
+              <span class="currency-prefix">₩</span>
+              <input
+                type="number"
+                id="pledgeAmountInput"
+                class="form-input currency-input"
+                min="1000"
+                step="1000"
+                value="30000"
+                required
+                placeholder="금액 입력 (최소 1,000원)"
+              />
+              <span class="currency-formatted" id="pledgeAmountFormatted">30,000원</span>
+            </div>
+
+            <!-- Interactive Range Slider -->
+            <input
+              type="range"
+              id="pledgeAmountSlider"
+              class="amount-slider"
+              min="0"
+              max="300000"
+              step="1"
+              value="30000"
+              aria-label="후원 금액 슬라이더"
+            />
+            <div class="slider-range-labels">
+              <span>₩0</span>
+              <span id="sliderMidLabel">50%</span>
+              <span id="sliderMaxLabel">최대 ₩300,000</span>
+            </div>
+          </div>
+
+          <!-- 3. Participant Circular Profile Photo Upload -->
+          <div class="participant-profile-box">
+            <div class="profile-box-header">
+              <span class="form-label" style="margin-bottom: 0;">3. 참여자 프로필 &amp; 사진 등록 <small class="optional-tag">(사진 선택사항)</small></span>
+            </div>
+
+            <div class="profile-upload-row">
+              <!-- 64px Circular Avatar Preview -->
+              <div class="profile-circle-preview" id="pledgeAvatarPreviewWrap">
+                <img id="pledgeAvatarPreviewImg" src="" alt="내 프로필 사진 미리보기" hidden />
+                <div class="default-indie-avatar" id="pledgeAvatarDefaultIcon" aria-hidden="true">
+                  <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="32" cy="32" r="32" fill="#F8EDF0"/>
+                    <circle cx="32" cy="24" r="10" fill="#C98691"/>
+                    <path d="M14 54C14 44.0589 22.0589 36 32 36C41.9411 36 50 44.0589 50 54" fill="#C98691"/>
+                  </svg>
+                </div>
+              </div>
+
+              <div class="profile-upload-actions">
+                <div class="profile-btn-group">
+                  <label class="btn-outline-accent btn-sm file-upload-btn" for="pledgeAvatarFileInput" id="pledgeAvatarUploadLabel">
+                    📷 프로필 사진 추가
+                    <input
+                      type="file"
+                      id="pledgeAvatarFileInput"
+                      accept="image/jpeg,image/png,image/webp"
+                      hidden
+                    />
+                  </label>
+                  <button type="button" class="btn-secondary btn-sm" id="removePledgeAvatarBtn" hidden>
+                    삭제
+                  </button>
+                </div>
+                <p class="profile-upload-hint" id="pledgeAvatarStorageHint">
+                  JPG, PNG, WEBP 지원 (자동으로 원형 크롭 및 용량 압축됩니다)
+                </p>
+              </div>
+            </div>
+
+            <div class="profile-consent-and-pin" id="pledgePhotoConsentBox" hidden>
+              <label class="consent-checkbox-label">
+                <input type="checkbox" id="pledgePhotoConsentCheck" />
+                <span><strong>[필수 동의]</strong> 공개 생일 펀딩 페이지에 내 프로필 사진이 게시되는 것에 동의합니다.</span>
+              </label>
+            </div>
+
+            <div class="form-row-2col" style="margin-top: 12px;">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" for="pledgeSenderName">보내는 분 이름 (입금자명)</label>
+                <input
+                  type="text"
+                  id="pledgeSenderName"
+                  class="form-input"
+                  placeholder="실제 입금자 이름 입력"
+                  maxlength="24"
+                  required
+                />
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" for="pledgeRelation" id="pledgeRelationLabel">주인공과의 관계</label>
+                <input
+                  type="text"
+                  id="pledgeRelation"
+                  class="form-input"
+                  placeholder="예: 친구, 동기, 가족, 동료"
+                  value="친구"
+                  maxlength="20"
+                />
+              </div>
+            </div>
+
+            <div class="pin-input-row">
+              <label class="form-label-xs" for="pledgeSelfPinInput">
+                🔒 내 사진 변경·삭제용 비밀번호 (선택, 4자리 이상 입력 시 추후 내 사진만 직접 수정/삭제 가능 · 타 사이트 비밀번호 재사용 금지)
+              </label>
+              <input
+                type="password"
+                id="pledgeSelfPinInput"
+                class="form-input input-sm"
+                placeholder="예: 1234 (사진을 등록하는 경우 필수 입력)"
+                maxlength="20"
+                autocomplete="new-password"
+              />
+            </div>
+
+            <!-- Public Scope & Privacy Notice -->
+            <div class="public-scope-notice" role="note" aria-label="입력 정보 공개 범위 안내">
+              <strong>📢 공개 범위 안내:</strong> 입력하신 <strong>이름(입금자명), 관계, 선택한 선물, 참여 금액, 축하 메시지, 프로필 사진</strong>은 본 생일 펀딩 페이지의 방문자에게 공개됩니다. 설정하신 <strong>사진 관리 비밀번호</strong>는 암호화(해시) 처리되어 외부에 절대 노출되지 않습니다.
+            </div>
+          </div>
+
+          <!-- 4. Birthday Message -->
+          <div class="form-group">
+            <div class="label-row">
+              <label class="form-label" for="pledgeMessageInput">4. 생일 축하 메시지</label>
+              <div class="card-theme-picker" role="radiogroup" aria-label="축하 카드 배경 테마">
+                <button type="button" class="theme-swatch active" data-theme="warm-cream" title="크림 화이트" aria-label="크림 테마"></button>
+                <button type="button" class="theme-swatch" data-theme="rose-blush" title="로즈 핑크" aria-label="로즈 테마"></button>
+                <button type="button" class="theme-swatch" data-theme="champagne-gold" title="피치 블러쉬" aria-label="피치 테마"></button>
+                <button type="button" class="theme-swatch" data-theme="mint-sage" title="코튼 라벤더" aria-label="라벤더 테마"></button>
+                <button type="button" class="theme-swatch" data-theme="lavender-dream" title="빈티지 모브" aria-label="모브 테마"></button>
+              </div>
+            </div>
+            <textarea
+              id="pledgeMessageInput"
+              class="form-textarea"
+              rows="2"
+              maxlength="250"
+              placeholder="따뜻한 생일 축하 인사를 남겨주세요!"
+              required
+            ></textarea>
+            <div class="textarea-footer">
+              <span class="char-counter"><span id="msgCharCount">0</span> / 250자</span>
+            </div>
+          </div>
+
+          <!-- 5. Remittance Step Box -->
+          <div class="toss-remit-box" id="tossRemitBox">
+            <div class="toss-remit-header">
+              <div class="toss-remit-title-row">
+                <span class="toss-step-badge">STEP 1 · 송금하기</span>
+                <strong>받는 분: <span class="recipient-highlight" id="remitRecipientName">-</span></strong>
+              </div>
+              <div class="remit-header-actions">
+                <button type="button" class="btn-copy-amount" id="copyAmountBtn" title="선택한 금액 복사">
+                  📋 <span id="copyAmountBtnText">30,000원 복사</span>
+                </button>
+                <button type="button" class="btn-edit-remit-inline admin-only-ui" id="inlineEditRemitBtn" title="펀딩 주인: 송금 링크 및 계좌번호 수정" hidden>
+                  ⚙️ 설정
+                </button>
+              </div>
+            </div>
+
+            <!-- Configured Remittance Methods -->
+            <div id="remitConfiguredArea">
+              <p class="toss-guide-text">
+                아래 수단 중 편한 방법으로 <strong id="guideRecipientName">-</strong>님에게 <strong id="guideSelectedAmount">30,000원</strong>을 송금해 주세요.
+              </p>
+
+              <!-- Bank Account Card -->
+              <div class="bank-account-card" id="bankAccountDisplayCard" hidden>
+                <div class="bank-account-info">
+                  <span class="bank-badge">계좌송금</span>
+                  <div class="bank-text-wrap">
+                    <strong id="bankAccountTextDisplay">-</strong>
+                    <span class="bank-holder-text">예금주: <strong id="bankHolderDisplay">-</strong></span>
+                  </div>
+                </div>
+                <button type="button" class="btn-copy-bank" id="copyBankAccountBtn">
+                  📋 계좌 복사
+                </button>
+              </div>
+
+              <!-- Remittance Link Buttons -->
+              <div class="remit-links-grid" id="remitLinksGrid">
+                <button type="button" class="btn-kakao-open" id="openKakaoLinkBtn" hidden>
+                  <span id="openKakaoLinkBtnText">💛 카카오페이로 송금하기</span>
+                </button>
+
+                <button type="button" class="btn-toss-open" id="openTossLinkBtn" hidden>
+                  <span id="openTossLinkBtnText">💙 토스로 송금하기</span>
+                </button>
+              </div>
+
+              <div class="toss-opened-feedback" id="tossOpenedFeedback" hidden>
+                ✅ 송금 안내를 확인했습니다. 송금을 마친 후 아래 <strong>「송금했어요」</strong> 버튼을 눌러주세요!
+              </div>
+            </div>
+
+            <!-- Missing Remittance Notice -->
+            <div class="toss-link-missing-box" id="tossLinkMissingArea" hidden>
+              <div class="missing-title">아직 송금 링크나 계좌번호가 등록되지 않았습니다.</div>
+              <p class="missing-desc">
+                펀딩 주인에게 송금 수단 등록을 요청하거나, 펀딩 주인이라면 아래 버튼으로 바로 등록해 주세요.
+              </p>
+              <div class="missing-actions">
+                <button type="button" class="btn-primary btn-sm" id="goRegisterTossLinkBtn">
+                  💳 송금 링크 / 계좌번호 등록하기
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-error-msg" id="pledgeErrorMsg" hidden></div>
+
+          <!-- 6. "송금했어요" Submit Step -->
+          <div class="modal-footer pledge-modal-footer">
+            <div class="pledge-footer-notice">
+              <span class="step2-badge">STEP 2</span>
+              <span>송금 후 아래 버튼을 누르면 <strong>'입금 확인 대기'</strong>로 저장되며, 펀딩 주인 승인 후 달성률에 반영됩니다.</span>
+            </div>
+            <div class="pledge-footer-buttons">
+              <button type="button" class="btn-secondary" id="cancelPledgeBtn">취소</button>
+              <button type="submit" class="btn-primary btn-lg btn-submit-pledge" id="submitSentBtn">
+                <span id="submitPledgeBtnText">💸 송금했어요 (입금 확인 요청)</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Step 2: Pending Deposit Confirmation View -->
+      <div id="pledgeReceiptView" hidden>
+        <div class="receipt-card">
+          <div class="receipt-avatar-wrap" id="receiptAvatarWrap"></div>
+          <span class="receipt-status-pill">입금 확인 대기 상태</span>
+          <h3 class="receipt-title">펀딩 참여 내역이 접수되었습니다!</h3>
+          <p class="receipt-subtitle" id="receiptStorageNoticeText">
+            현재 <strong>'입금 확인 대기'</strong> 상태입니다. 펀딩 주인이 실제 입금 여부를 확인하고 승인하면 달성률에 최종 반영됩니다.
+          </p>
+
+          <div class="receipt-summary-box">
+            <div class="receipt-row">
+              <span>진행 상태</span>
+              <strong class="status-text-pending">⏳ 입금 확인 대기 (미반영)</strong>
+            </div>
+            <div class="receipt-row">
+              <span>참여자</span>
+              <strong id="receiptSender">-</strong>
+            </div>
+            <div class="receipt-row">
+              <span>선택한 선물</span>
+              <strong id="receiptGiftName">-</strong>
+            </div>
+            <div class="receipt-row highlight">
+              <span>송금 요청 금액</span>
+              <strong id="receiptAmount">₩0</strong>
+            </div>
+            <div class="receipt-row">
+              <span>달성률 반영 안내</span>
+              <strong class="receipt-progress-jump" id="receiptProgressJump">펀딩 주인 승인 시 반영 예정</strong>
+            </div>
+          </div>
+
+          <blockquote class="receipt-message-preview" id="receiptMessagePreview"></blockquote>
+
+          <div class="receipt-actions">
+            <button type="button" class="btn-primary btn-lg" id="receiptDoneBtn">확인</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL 2: PARTICIPANT SELF-SERVICE PROFILE PHOTO EDIT / DELETE MODAL
+       ===================================================================== -->
+  <div class="modal-backdrop" id="avatarManageModalBackdrop" hidden aria-hidden="true">
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="avatarManageModalTitle">
+      <button type="button" class="modal-close-btn" id="closeAvatarManageModalBtn" aria-label="모달 닫기">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+
+      <div class="modal-header">
+        <span class="modal-eyebrow">PROFILE PHOTO PRIVACY</span>
+        <h3 class="modal-title" id="avatarManageModalTitle">내 프로필 사진 변경 / 삭제</h3>
+        <p class="modal-subtitle" id="avatarManageTargetName">참여 시 설정한 비밀번호를 입력하면 본인 프로필 사진을 변경하거나 삭제할 수 있습니다.</p>
+      </div>
+
+      <form id="avatarManageForm" novalidate>
+        <input type="hidden" id="managePledgeId" value="" />
+
+        <div class="profile-upload-row" style="justify-content: center; margin-bottom: 16px;">
+          <div class="profile-circle-preview lg" id="manageAvatarPreviewWrap">
+            <img id="manageAvatarPreviewImg" src="" alt="프로필 사진 미리보기" hidden />
+            <div class="default-indie-avatar" id="manageAvatarDefaultIcon" aria-hidden="true">
+              <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="32" cy="32" r="32" fill="#F8EDF0"/>
+                <circle cx="32" cy="24" r="10" fill="#C98691"/>
+                <path d="M14 54C14 44.0589 22.0589 36 32 36C41.9411 36 50 44.0589 50 54" fill="#C98691"/>
+              </svg>
+            </div>
+          </div>
+
+          <div class="profile-upload-actions">
+            <div class="profile-btn-group">
+              <label class="btn-outline-accent btn-sm file-upload-btn" for="manageAvatarFileInput">
+                📷 새 사진 선택
+                <input
+                  type="file"
+                  id="manageAvatarFileInput"
+                  accept="image/jpeg,image/png,image/webp"
+                  hidden
+                />
+              </label>
+              <button type="button" class="btn-secondary btn-sm text-danger" id="manageDeleteAvatarBtn">
+                🗑️ 사진 삭제 (기본 아이콘으로)
+              </button>
+            </div>
+            <label class="consent-checkbox-label" id="manageConsentWrap" style="margin-top: 6px;" hidden>
+              <input type="checkbox" id="managePhotoConsentCheck" />
+              <span>공개 페이지에 프로필 사진 게시 동의</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="managePinVerifyInput">본인 확인 비밀번호 입력</label>
+          <input
+            type="password"
+            id="managePinVerifyInput"
+            class="form-input"
+            placeholder="펀딩 참여 시 설정한 비밀번호 입력"
+            required
+            autocomplete="current-password"
+          />
+          <p class="toss-admin-help" style="margin-top: 4px;">
+            ※ 본인이 설정한 비밀번호가 일치해야만 사진을 변경하거나 삭제할 수 있습니다. (펀딩 주인 로그인 상태에서는 비밀번호 없이도 관리 가능)
+          </p>
+        </div>
+
+        <div class="form-error-msg" id="avatarManageErrorMsg" hidden></div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="cancelAvatarManageBtn">취소</button>
+          <button type="submit" class="btn-primary" id="saveAvatarManageBtn">변경사항 적용하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL 3: ADD / EDIT WISHLIST GIFT MODAL (Funding Owner Only)
+       ===================================================================== -->
+  <div class="modal-backdrop" id="giftModalBackdrop" hidden aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="dialog" aria-modal="true" aria-labelledby="giftModalTitle">
+      <button type="button" class="modal-close-btn" id="closeGiftModalBtn" aria-label="모달 닫기">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+
+      <div class="modal-header">
+        <span class="modal-eyebrow">GIFT EDITOR</span>
+        <h3 class="modal-title" id="giftModalTitle">위시리스트 선물 등록 / 수정</h3>
+        <p class="modal-subtitle">선물 사진을 직접 업로드하거나 선물 이름과 목표 금액을 설정하세요.</p>
+      </div>
+
+      <form id="giftForm" novalidate>
+        <input type="hidden" id="editGiftId" value="" />
+
+        <!-- 1:1 Gift Photo Upload & Preview Section -->
+        <div class="photo-upload-section">
+          <label class="form-label">선물 사진 (1:1 정사각형 비율)</label>
+
+          <div class="photo-upload-layout">
+            <div class="photo-preview-square" id="giftPhotoPreviewBox">
+              <img id="giftPhotoPreviewImg" src="" alt="선물 사진 미리보기" hidden />
+              <div class="photo-preview-placeholder" id="giftPhotoPlaceholder">
+                <span class="placeholder-icon">📷</span>
+                <span class="placeholder-text">사진 미등록<br/>(기본 일러스트 표시)</span>
+              </div>
+            </div>
+
+            <div class="photo-upload-controls">
+              <div class="photo-btn-group">
+                <label class="btn-primary btn-sm file-upload-btn" for="giftPhotoFileInput">
+                  📷 선물 사진 업로드 (JPG/PNG/WEBP)
+                  <input
+                    type="file"
+                    id="giftPhotoFileInput"
+                    accept="image/jpeg,image/png,image/webp"
+                    hidden
+                  />
+                </label>
+                <button type="button" class="btn-secondary btn-sm" id="removeGiftPhotoBtn" hidden>
+                  🗑️ 사진 삭제
+                </button>
+              </div>
+
+              <div class="photo-fit-row">
+                <span class="fit-label">사진 표시 방식:</span>
+                <label class="fit-radio">
+                  <input type="radio" name="giftImageFit" value="cover" checked />
+                  <span>정사각형 꽉 채우기</span>
+                </label>
+                <label class="fit-radio">
+                  <input type="radio" name="giftImageFit" value="contain" />
+                  <span>사진 전체 보기(잘림 없음)</span>
+                </label>
+              </div>
+
+              <div class="photo-url-input-wrap">
+                <label class="form-label-xs" for="giftImageUrlInput">또는 외부 이미지 URL 직접 입력</label>
+                <input
+                  type="text"
+                  id="giftImageUrlInput"
+                  class="form-input input-sm"
+                  placeholder="예: https://..."
+                />
+              </div>
+
+              <div class="storage-status-notice" id="giftStorageNotice"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row-2col">
+          <div class="form-group">
+            <label class="form-label" for="giftCategorySelect">기본 일러스트 테마 (사진 없을 때 표시)</label>
+            <select id="giftCategorySelect" class="form-select">
+              <option value="fashion">🧣 패션 / 가방 / 액세서리</option>
+              <option value="fragrance">🕯️ 향수 / 뷰티 / 리빙</option>
+              <option value="audio">🎧 디지털 / 오디오 / 테크</option>
+              <option value="camera">📷 카메라 / 취미</option>
+              <option value="coffee">☕ 홈카페 / 키친</option>
+              <option value="travel">✈️ 여행 / 상품권 / 바우처</option>
+              <option value="cake">🎂 생일 케이크 / 디저트</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="giftPrioritySelect">우선순위 태그</label>
+            <select id="giftPrioritySelect" class="form-select">
+              <option value="1">🔥 1순위 위시 (가장 갖고 싶은 선물)</option>
+              <option value="2">✨ 2순위 위시 (일상 행복템)</option>
+              <option value="3">💛 3순위 위시 (소소한 기쁨)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="giftTitleInput">선물 이름</label>
+          <input
+            type="text"
+            id="giftTitleInput"
+            class="form-input"
+            placeholder="선물 이름을 입력하세요"
+            maxlength="50"
+            required
+          />
+        </div>
+
+        <div class="form-row-2col">
+          <div class="form-group">
+            <label class="form-label" for="giftBrandInput">브랜드 / 옵션 메모</label>
+            <input
+              type="text"
+              id="giftBrandInput"
+              class="form-input"
+              placeholder="예: 브랜드명, 색상, 사이즈 등"
+              maxlength="40"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="giftGoalInput">목표 금액 (원)</label>
+            <input
+              type="number"
+              id="giftGoalInput"
+              class="form-input"
+              min="1000"
+              step="1000"
+              value="100000"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="giftDescInput">선물 설명 / 코멘트</label>
+          <textarea
+            id="giftDescInput"
+            class="form-textarea"
+            rows="2"
+            maxlength="200"
+            placeholder="이 선물에 대한 간단한 설명이나 옵션을 적어주세요."
+            required
+          ></textarea>
+        </div>
+
+        <div class="form-error-msg" id="giftFormErrorMsg" hidden></div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="cancelGiftModalBtn">취소</button>
+          <button type="submit" class="btn-primary" id="saveGiftSubmitBtn">선물 저장하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL 4: FUNDING OWNER — REMITTANCE & PAGE PROFILE SETTINGS
+       ===================================================================== -->
+  <div class="modal-backdrop" id="profileModalBackdrop" hidden aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+      <button type="button" class="modal-close-btn" id="closeProfileModalBtn" aria-label="모달 닫기">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+
+      <div class="modal-header">
+        <span class="modal-eyebrow">FUNDING OWNER SETTINGS</span>
+        <h3 class="modal-title" id="profileModalTitle">송금 수단 · 생일 프로필 설정</h3>
+        <p class="modal-subtitle">내 생일 펀딩의 송금 계좌·링크와 페이지 소개 문구를 수정합니다.</p>
+      </div>
+
+      <form id="profileForm" novalidate>
+        <!-- 1. Remittance Configuration Box -->
+        <div class="toss-admin-config-box">
+          <div class="remit-config-section-title">💳 1. 친구들에게 송금 받을 수단 설정</div>
+
+          <div class="form-row-2col" style="margin-bottom: 12px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="bankNameInput">은행명</label>
+              <input
+                type="text"
+                id="bankNameInput"
+                class="form-input"
+                placeholder="예: 카카오뱅크, 토스뱅크, 국민"
+                maxlength="24"
+              />
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="bankAccountInput">계좌번호</label>
+              <input
+                type="text"
+                id="bankAccountInput"
+                class="form-input"
+                placeholder="예: 3333-01-2345678"
+                maxlength="40"
+              />
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" for="kakaoRemitUrlInput">
+              💛 카카오페이 송금 링크 URL (선택)
+            </label>
+            <input
+              type="url"
+              id="kakaoRemitUrlInput"
+              class="form-input"
+              placeholder="예: https://qr.kakaopay.com/..."
+            />
+          </div>
+
+          <div class="form-group" style="margin-bottom: 8px;">
+            <label class="form-label" for="tossRemitUrlInput">
+              💙 토스 송금 링크 URL (선택)
+            </label>
+            <input
+              type="url"
+              id="tossRemitUrlInput"
+              class="form-input"
+              placeholder="예: https://toss.me/..."
+            />
+          </div>
+
+          <div class="form-error-msg" id="tossUrlErrorMsg" hidden style="margin-top: 8px; margin-bottom: 0;"></div>
+        </div>
+
+        <!-- 2. Birthday Page Profile Settings -->
+        <div class="form-row-2col">
+          <div class="form-group">
+            <label class="form-label" for="hostNameEditInput">생일 주인공 이름</label>
+            <input type="text" id="hostNameEditInput" class="form-input" maxlength="24" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="hostBirthdayInput">생일 날짜</label>
+            <input type="date" id="hostBirthdayInput" class="form-input" required />
+          </div>
+        </div>
+
+        <div class="form-row-2col">
+          <div class="form-group">
+            <label class="form-label" for="hostEmojiSelect">대표 아이콘</label>
+            <select id="hostEmojiSelect" class="form-select">
+              <option value="🎂">🎂 생일 케이크</option>
+              <option value="👑">👑 오늘의 주인공</option>
+              <option value="🌷">🌷 봄날의 튤립</option>
+              <option value="🧸">🧸 포근한 테디베어</option>
+              <option value="🥂">🥂 샴페인 건배</option>
+              <option value="🎀">🎀 러블리 리본</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="hostHeadlineInput">메인 타이틀</label>
+            <input type="text" id="hostHeadlineInput" class="form-input" maxlength="45" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="hostSubtitleInput">서브 타이틀</label>
+          <input type="text" id="hostSubtitleInput" class="form-input" maxlength="60" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="hostBioInput">생일 펀딩 소개글</label>
+          <textarea id="hostBioInput" class="form-textarea" rows="2" maxlength="300" required></textarea>
+        </div>
+
+        <!-- 3. Intro Photo Configuration Box -->
+        <div class="toss-admin-config-box" style="margin-top: 14px; margin-bottom: 16px;">
+          <div class="remit-config-section-title">🖼️ 3. 인트로 축하 액자 사진 설정</div>
+          <p class="form-help-text" style="margin-bottom: 10px; font-size: 12.5px; color: var(--text-muted);">
+            생일 인트로 축하 화면 중앙 액자에 표시될 사진입니다. (JPG·PNG·WebP, 최대 5MB)
+          </p>
+
+          <div class="intro-profile-preview-card">
+            <div class="intro-preview-img-container" id="profileIntroPhotoThumbFrame">
+              <img id="profileIntroPhotoImg" class="intro-preview-thumbnail" alt="현재 인트로 사진" src="./intro-character.png" />
+            </div>
+
+            <div class="intro-profile-actions">
+              <div class="form-group" style="margin-bottom: 8px;">
+                <label class="form-label" for="profileIntroPhotoInput" style="font-size: 12.5px;">새 사진으로 변경</label>
+                <input
+                  type="file"
+                  id="profileIntroPhotoInput"
+                  class="form-input"
+                  accept="image/jpeg,image/png,image/webp"
+                />
+              </div>
+
+              <div class="form-group" style="margin-bottom: 8px;">
+                <label class="form-label" for="profileIntroPhotoFitSelect" style="font-size: 12.5px;">액자 맞춤 방식</label>
+                <select id="profileIntroPhotoFitSelect" class="form-select form-select-sm">
+                  <option value="cover">액자 채우기 (여백 없이 꽉 채움)</option>
+                  <option value="contain">전체 보기 (사진 전체가 보이도록 맞춤)</option>
+                </select>
+              </div>
+
+              <div class="intro-profile-buttons" style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+                <button type="button" class="btn-subtle btn-xs" id="profileIntroPhotoDeleteBtn" style="color: #dc2626;">
+                  🗑️ 사진 삭제 (기본 이미지로 복원)
+                </button>
+                <span id="profileIntroPhotoStatusText" style="font-size: 12px; color: var(--text-muted);"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pending delete retry banner if Storage removal previously failed -->
+          <div id="profilePendingDeleteBox" class="alert-box-warning" hidden style="margin-top: 10px; padding: 10px 12px; font-size: 12.5px; border-radius: 8px; background: #fffbeb; border: 1px solid #fef3c7; color: #92400e;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+              <span>⚠️ 이전 사진 파일이 Storage에 남아 있습니다: <code id="profilePendingDeleteFilename" style="font-size: 11px;"></code></span>
+              <button type="button" class="btn-subtle btn-xs" id="profileRetryDeletePendingBtn" style="color: #b45309; font-weight: 600; border: 1px solid #d97706; background: #ffffff;">
+                🗑️ 잔여 파일 지금 삭제
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="cancelProfileModalBtn">취소</button>
+          <button type="submit" class="btn-primary">설정 저장하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL 5: FUNDING OWNER PASSWORD LOGIN & DEV SUPABASE DB CONNECTION
+       (이메일/회원가입 없이 관리 비밀번호로만 인증 · 비밀번호 복구 기능 없음)
+       ===================================================================== -->
+  <div class="modal-backdrop" id="adminAuthModalBackdrop" hidden aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="dialog" aria-modal="true" aria-labelledby="adminAuthModalTitle">
+      <button type="button" class="modal-close-btn" id="closeAdminAuthModalBtn" aria-label="모달 닫기">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+
+      <div class="modal-header">
+        <span class="modal-eyebrow">FUNDING OWNER &amp; CLOUD DB</span>
+        <h3 class="modal-title" id="adminAuthModalTitle">펀딩 주인 비밀번호 인증 &amp; DB 연결</h3>
+        <p class="modal-subtitle">
+          각 펀딩은 생성 시 설정한 <strong>관리 비밀번호</strong>로 안전하게 격리되며, 서버 측에서 해시 검증 후 관리 세션이 부여됩니다.
+        </p>
+      </div>
+
+      <!-- 1. Funding Owner Password Login Section (Shown when viewing a funding) -->
+      <div class="toss-admin-config-box" id="ownerAuthSectionBox">
+        <div class="remit-config-section-title">
+          🔐 1. 현재 펀딩 주인 인증 (<span id="authModalFundingLabel">현재 펀딩</span>)
+        </div>
+
+        <!-- Logged Out View -->
+        <form id="adminLoginForm" novalidate>
+          <p class="toss-admin-help" style="margin-bottom: 10px;">
+            이 펀딩을 생성할 때 설정한 <strong>관리 비밀번호</strong>를 입력하면 선물 추가·수정, 송금 계좌 등록, 친구들의 입금 내역 승인을 수행할 수 있습니다.
+          </p>
+
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label class="form-label" for="adminPasswordInput">관리 비밀번호</label>
+            <input
+              type="password"
+              id="adminPasswordInput"
+              class="form-input"
+              placeholder="펀딩 생성 시 설정한 관리 비밀번호 입력"
+              autocomplete="current-password"
+              required
+            />
+          </div>
+
+          <div class="inline-password-alert" style="margin-bottom: 10px;">
+            ※ <strong>비밀번호 찾기 · 복구 코드 · 초기화 기능은 지원하지 않습니다.</strong> (연속 5회 오류 시 15분간 로그인이 잠깁니다)
+          </div>
+
+          <div class="form-error-msg" id="adminAuthErrorMsg" hidden></div>
+
+          <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+            <button type="submit" class="btn-primary btn-sm" id="adminLoginSubmitBtn">
+              🔐 펀딩 주인 로그인
+            </button>
+          </div>
+        </form>
+
+        <!-- Logged In View -->
+        <div id="adminLoggedInBox" hidden>
+          <div class="storage-status-notice cloud-ready" style="margin-bottom: 12px;">
+            ✅ <strong>펀딩 주인 관리 모드 활성화됨 (<span id="adminUserEmailDisplay">-</span>)</strong><br />
+            현재 펀딩의 위시리스트 선물 추가/수정/삭제, 입금 확인 승인/취소, 송금 계좌 설정을 수행할 수 있습니다.
+          </div>
+
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center;">
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <button type="button" class="btn-primary btn-sm" id="adminOpenCampaignConfigBtn">
+                💳 송금·계좌·프로필 설정 열기
+              </button>
+              <button type="button" class="btn-outline-accent btn-sm" id="adminCopyFundingUrlBtn">
+                🔗 내 펀딩 공유 URL 복사
+              </button>
+            </div>
+            <button type="button" class="btn-secondary btn-sm text-danger" id="adminLogoutBtn">
+              관리 모드 로그아웃
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Dev Supabase Project Connection Config Section -->
+      <div class="supabase-config-box">
+        <div class="remit-config-section-title">☁️ 2. personal_funding Supabase 데이터베이스 &amp; Storage (<code>gift-image</code>) 연결</div>
+        <p class="toss-admin-help" style="margin-bottom: 10px;">
+          기존 소현이 웹사이트 운영 DB와 완전히 분리된 <strong>personal_funding Supabase 프로젝트</strong>의 URL과 Anon(Publishable) Key를 연결하세요. (※ 절대 <code>service_role</code> 비밀키를 넣지 마세요!)
+        </p>
+
+        <form id="supabaseConnectForm" novalidate>
+          <div class="form-row-2col" style="margin-bottom: 10px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="quickSupabaseUrlInput">새 개발용 Supabase Project URL</label>
+              <input
+                type="url"
+                id="quickSupabaseUrlInput"
+                class="form-input"
+                placeholder="https://xxxx.supabase.co"
+                required
+              />
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="quickSupabaseBucketInput">Storage 버킷 이름</label>
+              <input
+                type="text"
+                id="quickSupabaseBucketInput"
+                class="form-input"
+                value="gift-image"
+                placeholder="gift-image"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label class="form-label" for="quickSupabaseAnonKeyInput">Supabase Publishable / Anon Public Key (공개 클라이언트용 키)</label>
+            <input
+              type="text"
+              id="quickSupabaseAnonKeyInput"
+              class="form-input"
+              placeholder="sb_publishable_... 또는 eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              autocomplete="off"
+              required
+            />
+          </div>
+
+          <div class="form-error-msg" id="supabaseConnectErrorMsg" hidden></div>
+
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center;">
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+              <button type="button" class="btn-secondary btn-sm" id="copyAppJsConfigSnippetBtn">
+                📋 app.js 배포용 코드 스니펫 복사
+              </button>
+            </div>
+            <button type="submit" class="btn-primary btn-sm" id="saveSupabaseConnectBtn">
+              ☁️ 개발용 DB 연결 및 동기화
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="cancelAdminAuthModalBtn">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <!-- Supabase JS v2 Client CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Main Client-side Application Script -->
+  <script src="app.js" defer></script>
+</body>
+</html>
