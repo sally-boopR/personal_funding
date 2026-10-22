@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
-  <title>personal_funding — 나만의 생일 선물 위시리스트 &amp; 펀딩</title>
+  <title>personal_funding — 특별한 날, 마음을 모으는 선물 펀딩</title>
   <meta name="application-name" content="personal_funding" />
-  <meta name="description" content="personal_funding — 회원가입 없이 이름과 관리 비밀번호만으로 누구나 나만의 생일 선물 위시리스트 펀딩 페이지를 만들고 친구들과 공유하는 서비스" />
+  <meta name="description" content="personal_funding — 회원가입 없이 이름과 관리 비밀번호만으로 누구나 나만의 선물 위시리스트 펀딩 페이지를 만들고 친구들과 마음을 모으는 서비스" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="personal_funding" />
-  <meta property="og:title" content="personal_funding — 나만의 생일 선물 위시리스트 &amp; 펀딩" />
-  <meta property="og:description" content="회원가입 없이 이름과 관리 비밀번호(8자 이상)만으로 나만의 생일 선물 펀딩 페이지를 만들고 친구들과 마음을 모아보세요." />
+  <meta property="og:title" content="personal_funding — 특별한 날, 마음을 모으는 선물 펀딩" />
+  <meta property="og:description" content="회원가입 없이 이름과 관리 비밀번호(8자 이상)만으로 나만의 선물 펀딩 페이지를 만들고 친구들과 소중한 마음을 모아보세요." />
   <!-- Pretendard & Editorial Fonts -->
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
@@ -43,9 +43,9 @@
 </head>
 <body>
   <!-- =====================================================================
-       FULLSCREEN BIRTHDAY CELEBRATION INTRO OVERLAY (3.6s Auto Transition)
+       FULLSCREEN CELEBRATION INTRO OVERLAY (3.6s Auto Transition)
        ===================================================================== -->
-  <div class="birthday-intro-overlay" id="birthdayIntroOverlay" role="dialog" aria-label="생일 축하 인트로 화면" hidden>
+  <div class="birthday-intro-overlay" id="birthdayIntroOverlay" role="dialog" aria-label="축하 인트로 화면" hidden>
     <!-- Ambient Soft Bokeh & Glow Backdrop -->
     <div class="intro-ambient-glow" aria-hidden="true">
       <span class="intro-orb orb-1"></span>
@@ -81,8 +81,8 @@
         />
       </figure>
 
-      <h1 class="intro-en-title" id="introEnTitle" aria-label="Happy Birthday!">
-        Happy Birthday!
+      <h1 class="intro-en-title" id="introEnTitle" aria-label="Congratulations!">
+        Congratulations!
       </h1>
 
       <div class="intro-divider-ornament" aria-hidden="true">
@@ -92,7 +92,7 @@
       </div>
 
       <p class="intro-kr-title" id="introKrTitle">
-        생일을 축하합니다! <span class="intro-heart-beat" aria-hidden="true">♡</span>
+        축하합니다! <span class="intro-heart-beat" aria-hidden="true">♡</span>
       </p>
 
       <p class="intro-sub-caption" id="introSubCaption">
@@ -295,13 +295,13 @@
         </span>
         <div class="brand-text">
           <span class="brand-title" id="topBrandTitle">personal_funding</span>
-          <span class="brand-sub" id="topBrandSub">나만의 생일 선물 위시리스트</span>
+          <span class="brand-sub" id="topBrandSub">나만의 선물 위시리스트</span>
         </div>
       </div>
 
       <!-- Center: Desktop Section Links (Shown when viewing a specific funding) -->
       <nav class="nav-links" id="fundingNavLinks" aria-label="주요 섹션 이동" hidden>
-        <a href="#heroSection" class="nav-link active">생일 홈</a>
+        <a href="#heroSection" class="nav-link active">펀딩 홈</a>
         <a href="#wishlistSection" class="nav-link">위시리스트 <span class="nav-count" id="navGiftCount">0</span></a>
         <a href="#guestbookSection" class="nav-link">
           축하 메시지
@@ -363,10 +363,10 @@
               🔐 펀딩 주인 비밀번호 인증
             </button>
             <button type="button" class="dropdown-item" id="replayIntroBtn">
-              🎆 생일 축하 인트로 다시 보기
+              🎆 축하 인트로 다시 보기
             </button>
             <button type="button" class="dropdown-item" id="dropdownGoCreateBtn">
-              ✨ 나만의 새 생일 펀딩 만들기
+              ✨ 나만의 새 선물 펀딩 만들기
             </button>
             <div class="admin-only-ui" id="dropdownAdminActionsGroup" hidden>
               <hr class="dropdown-divider" />
@@ -411,7 +411,7 @@
     <div class="mobile-nav-drawer" id="mobileNavDrawer" hidden>
       <div class="container mobile-drawer-inner">
         <div class="mobile-drawer-links funding-only-ui" id="mobileFundingLinksGroup" hidden>
-          <a href="#heroSection" class="mobile-drawer-link" data-close-drawer="true" id="mobileHomeNavLink">🎂 생일 펀딩 홈</a>
+          <a href="#heroSection" class="mobile-drawer-link" data-close-drawer="true" id="mobileHomeNavLink">🎁 펀딩 홈</a>
           <a href="#wishlistSection" class="mobile-drawer-link" data-close-drawer="true">
             🎁 선물 위시리스트
             <span class="nav-count" id="mobileNavGiftCount">0</span>
@@ -439,7 +439,7 @@
             💳 송금 링크 · 계좌 · 프로필 수정 (주인)
           </button>
           <button type="button" class="btn-outline-accent mobile-action-btn funding-only-ui" id="mobileGoCreateFundingBtn" hidden>
-            ✨ 나만의 새 생일 펀딩 만들기
+            ✨ 나만의 새 선물 펀딩 만들기
           </button>
         </div>
 
@@ -464,7 +464,7 @@
   </div>
 
   <!-- =====================================================================
-       VIEW A: CREATE MY BIRTHDAY FUNDING LANDING VIEW (When no ?f=ID)
+       VIEW A: CREATE MY FUNDING LANDING VIEW (When no ?f=ID)
        ===================================================================== -->
   <section class="create-funding-landing container" id="createFundingView" hidden>
     <div class="create-landing-grid">
@@ -476,8 +476,8 @@
         </div>
 
         <h1 class="create-hero-title">
-          누구나 1분 만에 만드는<br />
-          <span>나만의 생일 선물 펀딩</span>
+          특별한 날, 소중한 마음을 모으는<br />
+          <span>나만의 선물 펀딩</span>
         </h1>
         <p class="create-hero-desc">
           <strong>personal_funding</strong>은 회원가입이나 이메일 인증 없이 <strong>이름과 관리 비밀번호(8자 이상)</strong>만 입력하면 고유 펀딩 주소가 발급되는 간편 선물 펀딩 서비스입니다. 받고 싶은 선물과 사진을 올리고 친구들에게 공유해 보세요!
@@ -521,7 +521,7 @@
           </details>
         </div>
 
-        <!-- Go to Existing Funding ID Box & Recent Fundings on This Device -->
+        <!-- Go to Existing Funding ID Box -->
         <div class="existing-funding-Jump-card">
           <label class="form-label" for="jumpFundingIdInput">🔗 이미 공유받은 펀딩 주소나 고유 ID가 있나요?</label>
           <form id="jumpFundingForm" class="jump-funding-row" novalidate>
@@ -533,11 +533,6 @@
             />
             <button type="submit" class="btn-secondary">펀딩 보러가기 →</button>
           </form>
-
-          <div id="recentFundingsWrap" hidden style="margin-top: 14px;">
-            <div class="form-label-xs" style="margin-bottom: 6px;">📌 이 기기에서 최근 만들거나 방문한 펀딩</div>
-            <div class="recent-fundings-list" id="recentFundingsList"></div>
-          </div>
         </div>
       </div>
 
@@ -560,14 +555,16 @@
 
             <div class="form-row-2col">
               <div class="form-group">
-                <label class="form-label" for="createEventTypeSelect">1. 축하 이벤트 종류</label>
-                <select id="createEventTypeSelect" class="form-select">
-                  <option value="birthday" selected>🎂 생일 (생일을 축하합니다!)</option>
+                <label class="form-label" for="createEventTypeSelect">1. 축하 이벤트 종류 (선택)</label>
+                <select id="createEventTypeSelect" class="form-select" required>
+                  <option value="" disabled selected>이벤트 종류를 선택해 주세요</option>
+                  <option value="birthday">🎂 생일 (생일을 축하합니다!)</option>
                   <option value="graduation">🎓 졸업 (졸업을 축하합니다!)</option>
                   <option value="wedding">💍 결혼 (결혼을 축하합니다!)</option>
                   <option value="employment">💼 입사 (입사를 축하합니다!)</option>
                   <option value="admission">🎒 입학 (입학을 축하합니다!)</option>
-                  <option value="custom">✨ 직접 설정</option>
+                  <option value="general">🎁 일반 선물 / 기념일 (소중한 날을 기념해요)</option>
+                  <option value="custom">✨ 직접 설정 (원하는 축하 문구 입력)</option>
                 </select>
               </div>
 
@@ -577,7 +574,7 @@
                   type="text"
                   id="createEventCustomTextInput"
                   class="form-input"
-                  placeholder="원하는 축하 문구 입력 (예: 승진을 축하합니다!)"
+                  placeholder="원하는 축하 문구 입력 (예: 첫 자취를 축하해!)"
                   maxlength="35"
                 />
               </div>
@@ -609,7 +606,8 @@
               <div class="form-group">
                 <label class="form-label" for="createEmojiSelect">대표 아이콘</label>
                 <select id="createEmojiSelect" class="form-select">
-                  <option value="🎂" selected>🎂 생일 케이크</option>
+                  <option value="🎁" selected>🎁 선물 상자</option>
+                  <option value="🎂">🎂 케이크</option>
                   <option value="🎓">🎓 학사모 / 졸업</option>
                   <option value="💍">💍 웨딩 링 / 결혼</option>
                   <option value="💼">💼 서류가방 / 입사</option>
@@ -665,7 +663,7 @@
                   type="text"
                   id="createHeadlineInput"
                   class="form-input"
-                  placeholder="미입력 시 '{이름}의 생일 선물 펀딩'"
+                  placeholder="미입력 시 '{이름}의 선물 펀딩'"
                   maxlength="45"
                 />
               </div>
@@ -749,7 +747,7 @@
             <div class="form-error-msg" id="createFundingErrorMsg" hidden></div>
 
             <button type="submit" class="btn-primary btn-lg" id="createFundingSubmitBtn" style="width: 100%; margin-top: 12px;">
-              ✨ 내 생일 펀딩 만들기 &amp; 고유 URL 발급받기
+              ✨ 내 선물 펀딩 만들기 &amp; 고유 URL 발급받기
             </button>
           </form>
         </div>
@@ -758,7 +756,7 @@
         <div class="create-form-card" id="createdUrlSuccessBox" hidden>
           <div class="receipt-card" style="padding: 8px 4px;">
             <span class="receipt-status-pill">🎉 펀딩 생성 완료 · 주인 로그인 상태</span>
-            <h3 class="receipt-title" id="createdSuccessTitle">나만의 생일 펀딩이 만들어졌습니다!</h3>
+            <h3 class="receipt-title" id="createdSuccessTitle">나만의 선물 펀딩이 만들어졌습니다!</h3>
             <p class="receipt-subtitle">
               아래 <strong>고유 공유 URL</strong>을 복사해 카카오톡·인스타그램 프로필에 공유하고, 내 페이지에서 받고 싶은 선물 사진과 금액을 자유롭게 수정해 보세요.
             </p>
@@ -786,7 +784,7 @@
 
             <div class="receipt-actions" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
               <button type="button" class="btn-secondary btn-lg" id="copyIssuedUrlAgainBtn">📋 공유 링크 복사하기</button>
-              <button type="button" class="btn-primary btn-lg" id="goMyCreatedFundingBtn">🎂 내 펀딩 페이지로 이동 (선물 등록하기) →</button>
+              <button type="button" class="btn-primary btn-lg" id="goMyCreatedFundingBtn">🎁 내 펀딩 페이지로 이동 (선물 등록하기) →</button>
             </div>
           </div>
         </div>
@@ -801,25 +799,25 @@
     <!-- 1. Hero Celebration Banner -->
     <section class="hero-section container" id="heroSection">
       <div class="hero-grid">
-        <!-- Left Column: Birthday Host Profile -->
+        <!-- Left Column: Host Profile -->
         <div class="hero-story-card">
           <div class="hero-eyebrow-row">
             <span class="pill-exclusive" id="heroExclusivePill">personal_funding</span>
             <span class="pill-dday" id="heroDdayBadge">D-DAY</span>
-            <span class="pill-date" id="heroDateBadge">생일 날짜</span>
-            <button type="button" class="btn-ghost-xs admin-only-ui" id="quickEditCampaignBtn" title="펀딩 주인: 생일 정보 및 송금 설정 수정" hidden>
+            <span class="pill-date" id="heroDateBadge">기념일 날짜</span>
+            <button type="button" class="btn-ghost-xs admin-only-ui" id="quickEditCampaignBtn" title="펀딩 주인: 펀딩 정보 및 송금 설정 수정" hidden>
               ✏️ 설정 수정
             </button>
           </div>
 
           <div class="hero-profile-header">
             <div class="avatar-ring-wrap">
-              <div class="hero-avatar" id="heroAvatarDisplay" aria-hidden="true">🎂</div>
+              <div class="hero-avatar" id="heroAvatarDisplay" aria-hidden="true">🎁</div>
               <span class="avatar-sparkle">✨</span>
             </div>
             <div class="hero-title-group">
-              <p class="hero-subtitle" id="heroSubtitle">소중한 마음을 모으는 생일 위시리스트</p>
-              <h1 class="hero-title" id="heroTitle">생일 선물 펀딩</h1>
+              <p class="hero-subtitle" id="heroSubtitle">소중한 마음을 모으는 위시리스트</p>
+              <h1 class="hero-title" id="heroTitle">선물 펀딩</h1>
             </div>
           </div>
 
@@ -841,7 +839,7 @@
         </div>
 
         <!-- Right Column: Live Crowdfunding Thermometer & Metrics -->
-        <aside class="hero-stats-card" aria-label="생일 펀딩 달성 현황">
+        <aside class="hero-stats-card" aria-label="선물 펀딩 달성 현황">
           <div class="stats-top-row">
             <div class="stats-text-col">
               <span class="stats-label">현재 입금 확인된 모금액</span>
@@ -899,7 +897,7 @@
           <!-- Recent Supporters Circular Avatar Strip -->
           <div class="recent-supporters-box" id="recentSupportersBox">
             <div class="supporters-avatars" id="supportersAvatarStack"></div>
-            <p class="supporters-copy" id="supportersSummaryText">첫 번째로 생일 축하 마음을 전해보세요!</p>
+            <p class="supporters-copy" id="supportersSummaryText">첫 번째로 응원과 축하 마음을 전해보세요!</p>
           </div>
         </aside>
       </div>
@@ -909,7 +907,7 @@
     <section class="wishlist-section container" id="wishlistSection">
       <div class="section-header">
         <div class="section-title-wrap">
-          <span class="section-eyebrow" id="wishlistEyebrow">BIRTHDAY WISHLIST</span>
+          <span class="section-eyebrow" id="wishlistEyebrow">GIFT WISHLIST</span>
           <h2 class="section-title" id="wishlistSectionTitle">선물 위시리스트</h2>
           <p class="section-desc">원하는 선물을 선택해 원하는 금액만큼 마음을 보탤 수 있습니다.</p>
         </div>
@@ -1001,10 +999,10 @@
       <div class="footer-left">
         <div class="footer-brand">
           <span class="brand-badge sm">🎁</span>
-          <strong id="footerBrandTitle">personal_funding — 나만의 생일 선물 위시리스트 &amp; 펀딩</strong>
+          <strong id="footerBrandTitle">personal_funding — 특별한 날, 마음을 모으는 선물 펀딩</strong>
         </div>
         <p class="footer-note" id="footerStorageStatusNote">
-          personal_funding — 누구나 이름과 관리 비밀번호만으로 나만의 생일 선물 위시리스트 펀딩을 만들 수 있습니다.
+          personal_funding — 누구나 이름과 관리 비밀번호만으로 나만의 선물 위시리스트 펀딩을 만들 수 있습니다.
         </p>
       </div>
       <div class="footer-right" style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -1037,8 +1035,16 @@
       <div id="pledgeFormView">
         <div class="modal-header">
           <span class="modal-eyebrow" id="pledgeModalEyebrow">GIFT FUNDING</span>
-          <h3 class="modal-title" id="pledgeModalTitle">생일 선물 펀딩하기</h3>
+          <h3 class="modal-title" id="pledgeModalTitle">선물 펀딩하기</h3>
           <p class="modal-subtitle" id="pledgeModalSubtitle">선물과 금액, 프로필 사진 및 축하 메시지를 입력한 뒤 송금해 주세요.</p>
+        </div>
+
+        <!-- Funding Purpose & Event Type Clarification Banner -->
+        <div class="pledge-purpose-banner" id="pledgePurposeBanner">
+          <span class="pledge-purpose-tag" id="pledgePurposeTag">🎁 선물 펀딩</span>
+          <p class="pledge-purpose-text" id="pledgePurposeText">
+            이 펀딩은 <strong>주인공</strong>님의 선물 펀딩입니다.
+          </p>
         </div>
 
         <form id="pledgeForm" novalidate>
@@ -1162,7 +1168,7 @@
             <div class="profile-consent-and-pin" id="pledgePhotoConsentBox" hidden>
               <label class="consent-checkbox-label">
                 <input type="checkbox" id="pledgePhotoConsentCheck" />
-                <span><strong>[필수 동의]</strong> 공개 생일 펀딩 페이지에 내 프로필 사진이 게시되는 것에 동의합니다.</span>
+                <span><strong>[필수 동의]</strong> 공개 펀딩 페이지에 내 프로필 사진이 게시되는 것에 동의합니다.</span>
               </label>
             </div>
 
@@ -1208,14 +1214,14 @@
 
             <!-- Public Scope & Privacy Notice -->
             <div class="public-scope-notice" role="note" aria-label="입력 정보 공개 범위 안내">
-              <strong>📢 공개 범위 안내:</strong> 입력하신 <strong>이름(입금자명), 관계, 선택한 선물, 참여 금액, 축하 메시지, 프로필 사진</strong>은 본 생일 펀딩 페이지의 방문자에게 공개됩니다. 설정하신 <strong>사진 관리 비밀번호</strong>는 암호화(해시) 처리되어 외부에 절대 노출되지 않습니다.
+              <strong>📢 공개 범위 안내:</strong> 입력하신 <strong>이름(입금자명), 관계, 선택한 선물, 참여 금액, 축하 메시지, 프로필 사진</strong>은 본 펀딩 페이지의 방문자에게 공개됩니다. 설정하신 <strong>사진 관리 비밀번호</strong>는 암호화(해시) 처리되어 외부에 절대 노출되지 않습니다.
             </div>
           </div>
 
-          <!-- 4. Birthday Message -->
+          <!-- 4. Message -->
           <div class="form-group">
             <div class="label-row">
-              <label class="form-label" for="pledgeMessageInput">4. 생일 축하 메시지</label>
+              <label class="form-label" for="pledgeMessageInput" id="pledgeMessageLabel">4. 응원과 축하 메시지</label>
               <div class="card-theme-picker" role="radiogroup" aria-label="축하 카드 배경 테마">
                 <button type="button" class="theme-swatch active" data-theme="warm-cream" title="크림 화이트" aria-label="크림 테마"></button>
                 <button type="button" class="theme-swatch" data-theme="rose-blush" title="로즈 핑크" aria-label="로즈 테마"></button>
@@ -1229,7 +1235,7 @@
               class="form-textarea"
               rows="2"
               maxlength="250"
-              placeholder="따뜻한 생일 축하 인사를 남겨주세요!"
+              placeholder="따뜻한 응원과 축하 메시지를 남겨주세요!"
               required
             ></textarea>
             <div class="textarea-footer">
@@ -1252,6 +1258,11 @@
                   ⚙️ 설정
                 </button>
               </div>
+            </div>
+
+            <!-- Remittance Purpose Callout -->
+            <div class="remit-purpose-callout" id="remitPurposeCallout">
+              💡 <strong>주인공</strong>님의 선물을 위한 송금 계좌입니다. 송금 전 예금주(<strong>주인공</strong>)가 맞는지 꼭 확인해 주세요.
             </div>
 
             <!-- Configured Remittance Methods -->
@@ -1538,7 +1549,7 @@
               <option value="camera">📷 카메라 / 취미</option>
               <option value="coffee">☕ 홈카페 / 키친</option>
               <option value="travel">✈️ 여행 / 상품권 / 바우처</option>
-              <option value="cake">🎂 생일 케이크 / 디저트</option>
+              <option value="cake">🎂 케이크 / 디저트</option>
             </select>
           </div>
 
@@ -1641,8 +1652,8 @@
 
       <div class="modal-header">
         <span class="modal-eyebrow">FUNDING OWNER SETTINGS</span>
-        <h3 class="modal-title" id="profileModalTitle">송금 수단 · 생일 프로필 설정</h3>
-        <p class="modal-subtitle">내 생일 펀딩의 송금 계좌·링크와 페이지 소개 문구를 수정합니다.</p>
+        <h3 class="modal-title" id="profileModalTitle">송금 수단 · 펀딩 프로필 설정</h3>
+        <p class="modal-subtitle">내 펀딩의 송금 계좌·링크와 페이지 소개 문구를 수정합니다.</p>
       </div>
 
       <form id="profileForm" novalidate>
@@ -1710,7 +1721,8 @@
               <option value="wedding">💍 결혼 (결혼을 축하합니다!)</option>
               <option value="employment">💼 입사 (입사를 축하합니다!)</option>
               <option value="admission">🎒 입학 (입학을 축하합니다!)</option>
-              <option value="custom">✨ 직접 설정</option>
+              <option value="general">🎁 일반 선물 / 기념일 (소중한 날을 기념해요)</option>
+              <option value="custom">✨ 직접 설정 (원하는 축하 문구 입력)</option>
             </select>
           </div>
 
@@ -1720,7 +1732,7 @@
               type="text"
               id="profileEventCustomTextInput"
               class="form-input"
-              placeholder="예: 승진을 축하합니다!"
+              placeholder="예: 첫 자취를 축하해!"
               maxlength="35"
             />
           </div>
@@ -1740,7 +1752,8 @@
           <div class="form-group">
             <label class="form-label" for="hostEmojiSelect">대표 아이콘</label>
             <select id="hostEmojiSelect" class="form-select">
-              <option value="🎂">🎂 생일 케이크</option>
+              <option value="🎁">🎁 선물 상자</option>
+              <option value="🎂">🎂 케이크</option>
               <option value="🎓">🎓 학사모 / 졸업</option>
               <option value="💍">💍 웨딩 링 / 결혼</option>
               <option value="💼">💼 서류가방 / 입사</option>
@@ -1766,7 +1779,7 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="hostBioInput">생일 펀딩 소개글</label>
+          <label class="form-label" for="hostBioInput">펀딩 소개글</label>
           <textarea id="hostBioInput" class="form-textarea" rows="2" maxlength="300" required></textarea>
         </div>
 
@@ -1774,7 +1787,7 @@
         <div class="toss-admin-config-box" style="margin-top: 14px; margin-bottom: 16px;">
           <div class="remit-config-section-title">🖼️ 3. 인트로 축하 액자 사진 설정</div>
           <p class="form-help-text" style="margin-bottom: 10px; font-size: 12.5px; color: var(--text-muted);">
-            생일 인트로 축하 화면 중앙 액자에 표시될 사진입니다. (JPG·PNG·WebP, 최대 5MB)
+            인트로 축하 화면 중앙 액자에 표시될 사진입니다. (JPG·PNG·WebP, 최대 5MB)
           </p>
 
           <div class="intro-profile-preview-card">
@@ -1851,7 +1864,7 @@
       <div class="guide-modal-header">
         <div class="guide-badge-pill">🌸 이용 방법 안내</div>
         <h3 class="guide-modal-title" id="userGuideModalTitle">마음을 모아 선물해요! ♡</h3>
-        <p class="guide-modal-desc">친구들과 함께하는 따뜻한 생일 펀딩, 이렇게 이용해요!</p>
+        <p class="guide-modal-desc">친구들과 함께하는 따뜻한 선물 펀딩, 이렇게 이용해요!</p>
       </div>
 
       <div class="guide-steps-list">

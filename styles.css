@@ -497,7 +497,7 @@ html.intro-fading-out .birthday-intro-overlay {
   min-width: 0;
 }
 
-/* Step 2: 'Happy Birthday!' */
+/* Step 2: English Event Title (e.g. 'Happy Birthday!', 'Happy Graduation!', 'Congratulations!') */
 .intro-en-title {
   font-family: var(--font-display);
   font-size: clamp(2rem, 8.2vw, 3.35rem);
@@ -533,7 +533,7 @@ html.intro-fading-out .birthday-intro-overlay {
   color: var(--pink-main);
 }
 
-/* Step 3: '소현아, 생일 축하해 ♡' */
+/* Step 3: Korean Event Celebration Phrase (e.g. '소현아, 생일을 축하합니다! ♡', '소현아, 졸업을 축하합니다! 🎓') */
 .intro-kr-title {
   font-size: clamp(1.35rem, 5.5vw, 1.95rem);
   font-weight: 800;
@@ -2854,6 +2854,55 @@ html.intro-fading-out .birthday-intro-overlay {
   color: #3B634E;
 }
 
+/* Funding Purpose & Clarification Banner in Pledge Modal */
+.pledge-purpose-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #FFF5F7;
+  border: 1px solid var(--pink-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  box-sizing: border-box;
+}
+
+.pledge-purpose-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--pink-main);
+  color: #FFFFFF;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.pledge-purpose-text {
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.45;
+  flex: 1 1 200px;
+}
+
+.remit-purpose-callout {
+  background: #FFF9F7;
+  border-left: 3px solid var(--pink-main);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  margin-top: 10px;
+  margin-bottom: 12px;
+  line-height: 1.45;
+  box-sizing: border-box;
+}
+
 /* Selected Gift Mini Status Preview inside Pledge Modal */
 .selected-gift-preview {
   margin-top: 8px;
@@ -3989,32 +4038,6 @@ body:not(.is-admin-mode) .admin-only-ui {
     width: 100%;
     text-align: center;
   }
-}
-
-.recent-fundings-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.recent-funding-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: var(--radius-pill);
-  background: var(--bg-surface);
-  border: 1px solid var(--border-strong);
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  transition: all 0.16s ease;
-}
-
-.recent-funding-chip:hover {
-  background: var(--pink-soft);
-  border-color: var(--pink-main);
-  color: var(--pink-deep);
 }
 
 .issued-url-box {

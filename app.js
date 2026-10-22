@@ -1,5 +1,5 @@
 /**
- * personal_funding — 다중 사용자 생일 선물 위시리스트 & 크라우드펀딩 웹 앱
+ * personal_funding — 다중 사용자 맞춤 선물 위시리스트 & 크라우드펀딩 웹 앱
  * - 공식 서비스명: personal_funding
  * - 회원가입/이메일 인증 없이 [이름 + 관리 비밀번호(8자 이상)]만으로 고유 펀딩 생성 및 공유 URL(?f=ID) 자동 발급
  * - 각 펀딩의 선물, 참여 내역, 관리자 권한을 campaign_id 기준으로 완전 분리
@@ -32,7 +32,6 @@
   const LOCAL_MULTI_DB_KEY = 'bday_multi_platform_local_db_v1';
   const SUPABASE_CONN_STORAGE_KEY = 'bday_multi_supabase_conn_v1';
   const CHEERED_IDS_STORAGE_KEY = 'bday_multi_cheered_ids_v1';
-  const RECENT_FUNDINGS_STORAGE_KEY = 'bday_multi_recent_fundings_v1';
   const OWNER_SESSION_PREFIX = 'bday_multi_owner_token_v1_';
   const DEFAULT_BUCKET_NAME = 'gift-image';
   const MAX_UPLOAD_FILE_BYTES = 5 * 1024 * 1024; // 5MB file size limit (matches storage.buckets limit)
@@ -215,6 +214,19 @@
       pledgeTitle: (name) => `${name}님에게 입학 축하 펀딩하기`,
       pledgePlaceholder: (name) => `${name}님에게 따뜻한 입학 축하와 응원 메시지를 남겨주세요!`
     },
+    general: {
+      key: 'general',
+      label: '선물 펀딩',
+      emoji: '🎁',
+      enTitle: 'Congratulations!',
+      introPhrase: '축하와 감사의 마음을 전해요!',
+      ornament: '♡',
+      subCaption: '소중한 마음을 담은 선물 위시리스트가 열립니다',
+      defaultHeadline: (name) => `${name}의 선물 펀딩`,
+      defaultSubtitle: '소중한 마음을 모으는 위시리스트',
+      pledgeTitle: (name) => `${name}님에게 선물 펀딩하기`,
+      pledgePlaceholder: (name) => `${name}님에게 따뜻한 응원과 축하 메시지를 남겨주세요!`
+    },
     custom: {
       key: 'custom',
       label: '직접 설정',
@@ -231,9 +243,21 @@
   };
 
   // Create default initial gifts for a new funding campaign
-  function createInitialGiftsForCampaign(campaignId, hostName, eventType = 'birthday') {
+  function createInitialGiftsForCampaign(campaignId, hostName, eventType = 'general') {
     const cleanName = String(hostName || '주인공').trim();
-    const cfg = EVENT_TYPE_CONFIG[eventType] || EVENT_TYPE_CONFIG.birthday;
+    const cfg = EVENT_TYPE_CONFIG[eventType] || EVENT_TYPE_CONFIG.general;
+    const isCustom = eventType === 'custom';
+    const isGeneral = eventType === 'general';
+    const gift3Title = (isCustom || isGeneral)
+      ? `${cleanName}의 축하 스페셜 선물 & 꽃다발`
+      : `${cleanName} ${cfg.label} 축하 선물 & 꽃다발`;
+    const gift3Brand = (isCustom || isGeneral)
+      ? '스페셜 기념 선물'
+      : `${cfg.label} 기념 스페셜`;
+    const gift3Desc = (isCustom || isGeneral)
+      ? '특별한 날을 더욱 빛내줄 축하 선물 모금입니다.'
+      : `${cfg.label}를 더욱 빛내줄 축하 선물 모금입니다.`;
+
     return [
       {
         id: `${campaignId}-gift-1`,
@@ -264,19 +288,19 @@
         campaignId,
         category: 'cake',
         priority: 3,
-        title: `${cleanName} ${cfg.label} 축하 선물 & 꽃다발`,
-        brand: `${cfg.label} 기념 스페셜`,
+        title: gift3Title,
+        brand: gift3Brand,
         goalAmount: 70000,
-        description: `${cfg.label}를 더욱 빛내줄 축하 선물 모금입니다.`,
+        description: gift3Desc,
         imageUrl: '',
         imageFit: 'cover'
       }
     ];
   }
 
-  function createEmptyCampaignState(campaignId = '', hostName = '생일 주인공', eventType = 'birthday') {
-    const cleanName = String(hostName || '생일 주인공').trim();
-    const cfg = EVENT_TYPE_CONFIG[eventType] || EVENT_TYPE_CONFIG.birthday;
+  function createEmptyCampaignState(campaignId = '', hostName = '주인공', eventType = 'general') {
+    const cleanName = String(hostName || '주인공').trim();
+    const cfg = EVENT_TYPE_CONFIG[eventType] || EVENT_TYPE_CONFIG.general;
     return {
       campaign: {
         id: campaignId,
@@ -400,35 +424,6 @@
       } else {
         sessionStorage.removeItem(OWNER_SESSION_PREFIX + campaignId);
       }
-    } catch (e) {
-      // Ignore
-    }
-  }
-
-  function loadRecentFundings() {
-    try {
-      const raw = localStorage.getItem(RECENT_FUNDINGS_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch (e) {
-      // Ignore
-    }
-    return [];
-  }
-
-  function addRecentFundingRecord(campaignId, hostName, emoji = '🎂') {
-    if (!campaignId || !hostName) return;
-    try {
-      const list = loadRecentFundings().filter((item) => item && item.id !== campaignId);
-      list.unshift({
-        id: campaignId,
-        hostName: String(hostName).trim(),
-        emoji: emoji || '🎂',
-        visitedAt: Date.now()
-      });
-      localStorage.setItem(RECENT_FUNDINGS_STORAGE_KEY, JSON.stringify(list.slice(0, 8)));
     } catch (e) {
       // Ignore
     }
@@ -762,7 +757,6 @@
     }
     finishBirthdayIntro();
     updateViewModeUI();
-    renderRecentFundingsList();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -773,7 +767,6 @@
       isAdminAuthenticated = false;
       finishBirthdayIntro();
       updateViewModeUI();
-      renderRecentFundingsList();
       checkFirstVisitGuideOnLoad();
       return;
     }
@@ -785,6 +778,8 @@
       if (loadedOk) {
         await verifyCurrentCampaignOwnerSession();
         setupRealtimeForCurrentCampaign(currentCampaignId);
+      } else {
+        loadedOk = loadCampaignFromLocalMultiDb(currentCampaignId);
       }
     } else {
       loadedOk = loadCampaignFromLocalMultiDb(currentCampaignId);
@@ -796,7 +791,6 @@
       return;
     }
 
-    addRecentFundingRecord(currentCampaignId, state.campaign.hostName, state.campaign.emoji);
     updateViewModeUI();
     renderApp();
     await prepareAndBindIntro();
@@ -926,13 +920,16 @@
       }
 
       const c = campRes.data;
+      const loadedEventType = c.event_type || 'general';
+      const eventCfg = EVENT_TYPE_CONFIG[loadedEventType] || EVENT_TYPE_CONFIG.general;
+      const cleanHost = c.host_name || '주인공';
       state.campaign = {
         id: c.id,
-        hostName: c.host_name || '생일 주인공',
-        emoji: c.emoji || '🎂',
+        hostName: cleanHost,
+        emoji: c.emoji || eventCfg.emoji || '🎁',
         birthdayDate: c.birthday_date || getTodayDateString(),
-        headline: c.headline || `${c.host_name}의 생일 선물 펀딩`,
-        subtitle: c.subtitle || '소중한 마음을 모으는 생일 위시리스트',
+        headline: c.headline || eventCfg.defaultHeadline(cleanHost),
+        subtitle: c.subtitle || eventCfg.defaultSubtitle,
         bio: c.bio || '',
         bankName: c.bank_name || '',
         bankAccount: c.bank_account || '',
@@ -941,7 +938,7 @@
         introImageUrl: c.intro_image_url || '',
         introImageFit: c.intro_image_fit === 'contain' ? 'contain' : 'cover',
         pendingDeleteImageUrl: c.pending_delete_image_url || '',
-        eventType: c.event_type || 'birthday',
+        eventType: loadedEventType,
         introMessage: c.intro_message || ''
       };
 
@@ -1023,10 +1020,10 @@
     });
 
     if (!isFundingView) {
-      document.title = 'personal_funding — 나만의 생일 선물 위시리스트 & 펀딩';
+      document.title = 'personal_funding — 특별한 날, 마음을 모으는 선물 펀딩';
       document.getElementById('topBrandTitle').textContent = 'personal_funding';
-      document.getElementById('topBrandSub').textContent = '나만의 생일 선물 위시리스트';
-      document.getElementById('footerBrandTitle').textContent = 'personal_funding — 나만의 생일 선물 위시리스트 & 펀딩';
+      document.getElementById('topBrandSub').textContent = '나만의 선물 위시리스트';
+      document.getElementById('footerBrandTitle').textContent = 'personal_funding — 특별한 날, 마음을 모으는 선물 펀딩';
       document.getElementById('pendingAlertBanner').hidden = true;
     }
 
@@ -1107,32 +1104,6 @@
   // =========================================================================
   // 2. CREATE NEW FUNDING CAMPAIGN LOGIC (Security Notice + No Password Recovery)
   // =========================================================================
-  function renderRecentFundingsList() {
-    const wrap = document.getElementById('recentFundingsWrap');
-    const listEl = document.getElementById('recentFundingsList');
-    if (!wrap || !listEl) return;
-
-    const list = loadRecentFundings();
-    if (list.length === 0) {
-      wrap.hidden = true;
-      listEl.innerHTML = '';
-      return;
-    }
-
-    wrap.hidden = false;
-    listEl.innerHTML = list
-      .map(
-        (item) => `
-          <button type="button" class="recent-funding-chip" data-recent-funding-id="${escapeHtml(item.id)}">
-            <span>${escapeHtml(item.emoji || '🎂')}</span>
-            <span>${escapeHtml(item.hostName)}의 펀딩</span>
-            <small style="color: var(--text-muted);">(${escapeHtml(item.id)})</small>
-          </button>
-        `
-      )
-      .join('');
-  }
-
   async function handleCreateFundingSubmit(e) {
     e.preventDefault();
 
@@ -1202,10 +1173,16 @@
     }
 
     const eventTypeSelect = document.getElementById('createEventTypeSelect');
-    const eventType = (eventTypeSelect && eventTypeSelect.value) || 'birthday';
+    const eventType = (eventTypeSelect && eventTypeSelect.value) || '';
+    if (!eventType) {
+      errEl.textContent = '펀딩 이벤트 종류를 선택해 주세요. (예: 생일, 졸업, 결혼, 일반 선물 등)';
+      errEl.hidden = false;
+      if (eventTypeSelect) eventTypeSelect.focus();
+      return;
+    }
     const customMsgInput = document.getElementById('createEventCustomTextInput');
     const customMsg = (customMsgInput && customMsgInput.value.trim()) || '';
-    const eventCfg = EVENT_TYPE_CONFIG[eventType] || EVENT_TYPE_CONFIG.birthday;
+    const eventCfg = EVENT_TYPE_CONFIG[eventType] || EVENT_TYPE_CONFIG.general;
     const eventLabel = eventType === 'custom' ? (customMsg || '축하') : eventCfg.label;
 
     const headline = customHeadline || eventCfg.defaultHeadline(hostName);
@@ -1303,7 +1280,6 @@
       }
 
       saveOwnerSessionToken(issuedCampaignId, issuedToken);
-      addRecentFundingRecord(issuedCampaignId, hostName, emoji);
       lastCreatedCampaignId = issuedCampaignId;
 
       // Optional Intro Photo upload & link (Decoupled: if photo fails, campaign is still preserved)
@@ -1371,7 +1347,6 @@
       document.getElementById('createAdminPasswordInput').value = '';
       document.getElementById('createAdminPasswordConfirmInput').value = '';
 
-      renderRecentFundingsList();
       launchConfetti();
       showToast(`🎉 ${eventLabel} 펀딩이 생성되었습니다! 공유 URL과 관리 비밀번호를 꼭 보관해 주세요.`);
     } catch (err) {
@@ -1844,8 +1819,8 @@
   }
 
   function bindIntroEventTitles() {
-    const rawType = (state.campaign && state.campaign.eventType) || 'birthday';
-    const cfg = EVENT_TYPE_CONFIG[rawType] || EVENT_TYPE_CONFIG.birthday;
+    const rawType = (state.campaign && state.campaign.eventType) || 'general';
+    const cfg = EVENT_TYPE_CONFIG[rawType] || EVENT_TYPE_CONFIG.general;
     const hostName = (state.campaign && state.campaign.hostName) || '주인공';
     const customMsg = ((state.campaign && state.campaign.introMessage) || '').trim();
     const vocative = formatVocativeName(hostName);
@@ -1985,7 +1960,6 @@
   function renderApp() {
     if (!currentCampaignId) {
       updateViewModeUI();
-      renderRecentFundingsList();
       return;
     }
     renderDynamicHostLabels();
@@ -2000,21 +1974,24 @@
   // Dynamically bind current campaign's hostName across Intro, Header, Hero, Wishlist, and Modals
   function renderDynamicHostLabels() {
     const hostName = state.campaign.hostName || '주인공';
-    const rawType = state.campaign.eventType || 'birthday';
-    const cfg = EVENT_TYPE_CONFIG[rawType] || EVENT_TYPE_CONFIG.birthday;
+    const rawType = state.campaign.eventType || 'general';
+    const cfg = EVENT_TYPE_CONFIG[rawType] || EVENT_TYPE_CONFIG.general;
+    const customMsg = ((state.campaign && state.campaign.introMessage) || '').trim();
     const vocative = formatVocativeName(hostName);
     const withParticle = hasFinalConsonant(hostName) ? '이와의' : '와의';
 
-    document.title = `${hostName} ${cfg.label} 선물 위시리스트 & 펀딩 | personal_funding`;
+    const evTitleLabel = (rawType === 'custom' || rawType === 'general') ? '선물' : `${cfg.label} 선물`;
+    document.title = `${hostName}님의 ${evTitleLabel} 위시리스트 & 펀딩 | personal_funding`;
 
     // Intro Event Titles Binding
     bindIntroEventTitles();
 
     // Header & Footer Brand
     document.getElementById('topBrandTitle').textContent = `FOR ${hostName}`;
-    document.getElementById('topBrandSub').textContent = `personal_funding · ${hostName} ${cfg.label} 펀딩`;
-    document.getElementById('mobileHomeNavLink').textContent = `${cfg.emoji} ${hostName} 홈`;
-    document.getElementById('footerBrandTitle').textContent = `personal_funding · FOR ${hostName} — ${hostName} ${cfg.label} 선물 위시리스트`;
+    const subLabel = (rawType === 'custom' || rawType === 'general') ? '선물 펀딩' : `${cfg.label} 펀딩`;
+    document.getElementById('topBrandSub').textContent = `personal_funding · ${hostName} ${subLabel}`;
+    document.getElementById('mobileHomeNavLink').textContent = `${cfg.emoji} ${hostName} 펀딩 홈`;
+    document.getElementById('footerBrandTitle').textContent = `personal_funding · FOR ${hostName} — ${hostName}님의 ${evTitleLabel} 위시리스트`;
 
     // Hero & Wishlist Titles
     document.getElementById('heroExclusivePill').textContent = `FOR ${hostName}`;
@@ -2034,6 +2011,41 @@
     document.getElementById('bankHolderDisplay').textContent = hostName;
     document.getElementById('openKakaoLinkBtnText').textContent = `💛 카카오페이로 ${hostName}님에게 송금하기`;
     document.getElementById('openTossLinkBtnText').textContent = `💙 토스로 ${hostName}님에게 송금하기`;
+
+    // Update Pledge Modal Purpose Clarification Banner
+    const pledgePurposeTag = document.getElementById('pledgePurposeTag');
+    const pledgePurposeText = document.getElementById('pledgePurposeText');
+    const remitPurposeCallout = document.getElementById('remitPurposeCallout');
+
+    let eventDisplayLabel = '';
+    let eventTagEmoji = cfg.emoji;
+    if (rawType === 'birthday') {
+      eventDisplayLabel = '생일 축하';
+    } else if (rawType === 'graduation') {
+      eventDisplayLabel = '졸업 축하';
+    } else if (rawType === 'wedding') {
+      eventDisplayLabel = '결혼 축하';
+    } else if (rawType === 'employment') {
+      eventDisplayLabel = '입사 축하';
+    } else if (rawType === 'admission') {
+      eventDisplayLabel = '입학 축하';
+    } else if (rawType === 'custom') {
+      eventDisplayLabel = customMsg ? `특별한 날 (${customMsg})` : '축하와 응원';
+      eventTagEmoji = '✨';
+    } else {
+      eventDisplayLabel = '소중한 날 선물';
+      eventTagEmoji = '🎁';
+    }
+
+    if (pledgePurposeTag) {
+      pledgePurposeTag.innerHTML = `${eventTagEmoji} ${escapeHtml(eventDisplayLabel)} 펀딩`;
+    }
+    if (pledgePurposeText) {
+      pledgePurposeText.innerHTML = `이 펀딩은 <strong>${escapeHtml(hostName)}</strong>님의 <strong>${escapeHtml(eventDisplayLabel)}</strong> 펀딩입니다. 송금 전 펀딩 목적을 확인해 주세요.`;
+    }
+    if (remitPurposeCallout) {
+      remitPurposeCallout.innerHTML = `💡 <strong>${escapeHtml(hostName)}</strong>님의 <strong>${escapeHtml(eventDisplayLabel)}</strong> 선물을 위한 송금 계좌입니다. 은행 앱에서 받는 분 예금주(<strong>${escapeHtml(hostName)}</strong>)가 맞는지 꼭 확인해 주세요.`;
+    }
   }
 
   function renderHeaderAndBanners() {
@@ -2077,7 +2089,8 @@
     ddayBadge.classList.toggle('dday-today', dday.isToday);
 
     document.getElementById('heroDateBadge').textContent = dday.formattedDate;
-    document.getElementById('heroAvatarDisplay').textContent = campaign.emoji || '🎂';
+    const eventCfg = EVENT_TYPE_CONFIG[campaign.eventType] || EVENT_TYPE_CONFIG.general;
+    document.getElementById('heroAvatarDisplay').textContent = campaign.emoji || eventCfg.emoji || '🎁';
     document.getElementById('heroSubtitle').textContent = campaign.subtitle;
     document.getElementById('heroTitle').textContent = campaign.headline;
     document.getElementById('heroBio').textContent = campaign.bio;
@@ -2113,13 +2126,15 @@
     const approvedList = state.contributions.filter((c) => c.status === 'approved');
     const recentApproved = approvedList.slice(-4).reverse();
 
-    const eventCfg = EVENT_TYPE_CONFIG[campaign.eventType] || EVENT_TYPE_CONFIG.birthday;
     if (approvedList.length === 0) {
       avatarStack.innerHTML = '';
       if (metrics.pendingCount > 0) {
         summaryText.innerHTML = `현재 <strong>${metrics.pendingCount}건</strong>의 송금이 입금 확인을 기다리고 있어요!`;
       } else {
-        summaryText.textContent = `${campaign.hostName}님에게 첫 번째로 ${eventCfg.label} 축하 마음을 전해보세요!`;
+        const cheerCopy = (campaign.eventType === 'custom' || campaign.eventType === 'general')
+          ? '축하와 응원 마음'
+          : `${eventCfg.label} 축하 마음`;
+        summaryText.textContent = `${campaign.hostName}님에게 첫 번째로 ${cheerCopy}을 전해보세요!`;
       }
     } else {
       avatarStack.innerHTML = recentApproved
@@ -2129,7 +2144,10 @@
         .join('');
       const latest = recentApproved[0];
       if (approvedList.length === 1) {
-        summaryText.innerHTML = `<strong>${escapeHtml(latest.senderName)}</strong>님의 ${eventCfg.label} 펀딩 입금이 확인되었어요!`;
+        const giftKindLabel = (campaign.eventType === 'custom' || campaign.eventType === 'general')
+          ? '선물 펀딩'
+          : `${eventCfg.label} 펀딩`;
+        summaryText.innerHTML = `<strong>${escapeHtml(latest.senderName)}</strong>님의 ${giftKindLabel} 입금이 확인되었어요!`;
       } else {
         summaryText.innerHTML = `최근 <strong>${escapeHtml(latest.senderName)}</strong>님 외 ${approvedList.length - 1}명이 마음을 모았어요!`;
       }
@@ -2241,7 +2259,7 @@
 
             <div class="gift-body">
               <div>
-                <div class="gift-brand">${escapeHtml(gift.brand || 'BIRTHDAY WISHLIST')}</div>
+                <div class="gift-brand">${escapeHtml(gift.brand || 'GIFT WISHLIST')}</div>
                 <h3 class="gift-title">${escapeHtml(gift.title)}</h3>
                 <p class="gift-desc">${escapeHtml(gift.description)}</p>
               </div>
@@ -2374,9 +2392,10 @@
       .map((item) => {
         const isApproved = item.status === 'approved';
         const targetGift = giftMap.get(item.giftId);
+        const evGiftWord = (state.campaign.eventType === 'birthday') ? '생일 선물' : '선물';
         const giftLabel = targetGift
           ? `${CATEGORY_EMOJI[targetGift.category] || '🎁'} ${targetGift.title}`
-          : `🎁 ${state.campaign.hostName} 생일 선물`;
+          : `🎁 ${state.campaign.hostName}님의 ${evGiftWord}`;
         const themeClass = `theme-${item.theme || 'warm-cream'}`;
 
         let depositStatusRowHtml = '';
@@ -2865,7 +2884,8 @@
 
       document.getElementById('receiptAvatarWrap').innerHTML = renderAvatarMediaHtml(finalAvatarUrl, senderName);
       document.getElementById('receiptSender').textContent = `${senderName} (${relation})`;
-      document.getElementById('receiptGiftName').textContent = targetGift ? targetGift.title : `${state.campaign.hostName} 생일 선물`;
+      const evGiftWord = (state.campaign.eventType === 'birthday') ? '생일 선물' : '선물';
+      document.getElementById('receiptGiftName').textContent = targetGift ? targetGift.title : `${state.campaign.hostName}님의 ${evGiftWord}`;
       document.getElementById('receiptAmount').textContent = formatKRW(amount);
       document.getElementById('receiptProgressJump').textContent =
         `현재 ${currentMetrics.rawPercent}% 유지 (펀딩 주인 승인 시 ${expectedAfterApprovePercent}% 반영)`;
@@ -3186,7 +3206,8 @@
     const title = document.getElementById('giftTitleInput').value.trim();
     const brand = document.getElementById('giftBrandInput').value.trim() || `${state.campaign.hostName} WISHLIST`;
     const goalAmount = Math.max(1000, Math.round(Number(document.getElementById('giftGoalInput').value) || 100000));
-    const description = document.getElementById('giftDescInput').value.trim() || `${state.campaign.hostName}의 생일 위시리스트 선물입니다.`;
+    const evGiftDesc = (state.campaign.eventType === 'birthday') ? '생일 위시리스트 선물' : '위시리스트 선물';
+    const description = document.getElementById('giftDescInput').value.trim() || `${state.campaign.hostName}님의 ${evGiftDesc}입니다.`;
     const manualUrl = document.getElementById('giftImageUrlInput').value.trim();
     const rawProductUrl = (document.getElementById('giftProductUrlInput')?.value || '').trim();
     const imageFit = getSelectedImageFit();
@@ -3419,10 +3440,10 @@
     const rawKakaoUrl = document.getElementById('kakaoRemitUrlInput').value.trim();
     const rawTossUrl = document.getElementById('tossRemitUrlInput').value.trim();
     const eventTypeSelect = document.getElementById('profileEventTypeSelect');
-    const eventType = (eventTypeSelect && eventTypeSelect.value) || 'birthday';
+    const eventType = (eventTypeSelect && eventTypeSelect.value) || 'general';
     const customMsgInput = document.getElementById('profileEventCustomTextInput');
     const customMsg = (customMsgInput && customMsgInput.value.trim()) || '';
-    const eventCfg = EVENT_TYPE_CONFIG[eventType] || EVENT_TYPE_CONFIG.birthday;
+    const eventCfg = EVENT_TYPE_CONFIG[eventType] || EVENT_TYPE_CONFIG.general;
 
     const hostName = document.getElementById('hostNameEditInput').value.trim();
     const emoji = document.getElementById('hostEmojiSelect').value;
@@ -3641,7 +3662,6 @@
       renderApp();
     }
 
-    addRecentFundingRecord(currentCampaignId, hostName, emoji);
     updateRemitBoxState();
     closeProfileModal();
     showToast('펀딩 프로필 및 인트로 사진 설정이 저장되었습니다!');
@@ -4834,8 +4854,8 @@
         if (createEventCustomBox) {
           createEventCustomBox.hidden = val !== 'custom';
         }
-        const cfg = EVENT_TYPE_CONFIG[val] || EVENT_TYPE_CONFIG.birthday;
-        if (createEmojiSel) {
+        const cfg = EVENT_TYPE_CONFIG[val] || EVENT_TYPE_CONFIG.general;
+        if (createEmojiSel && cfg) {
           createEmojiSel.value = cfg.emoji;
         }
         const currentName = (createHostNameInp && createHostNameInp.value.trim()) || '{이름}';
@@ -4847,8 +4867,8 @@
 
     if (createHostNameInp) {
       createHostNameInp.addEventListener('input', () => {
-        const selVal = (createEventTypeSel && createEventTypeSel.value) || 'birthday';
-        const cfg = EVENT_TYPE_CONFIG[selVal] || EVENT_TYPE_CONFIG.birthday;
+        const selVal = (createEventTypeSel && createEventTypeSel.value) || '';
+        const cfg = (selVal && EVENT_TYPE_CONFIG[selVal]) ? EVENT_TYPE_CONFIG[selVal] : EVENT_TYPE_CONFIG.general;
         const currentName = createHostNameInp.value.trim() || '{이름}';
         if (createHeadlineInp) {
           createHeadlineInp.placeholder = `미입력 시 '${cfg.defaultHeadline(currentName)}'`;
@@ -4971,13 +4991,6 @@
         return;
       }
       navigateToFunding(cid, true);
-    });
-
-    document.getElementById('recentFundingsList').addEventListener('click', (e) => {
-      const chip = e.target.closest('button[data-recent-funding-id]');
-      if (!chip) return;
-      const cid = chip.getAttribute('data-recent-funding-id');
-      if (cid) navigateToFunding(cid, false);
     });
 
     // Visibility Change Listener for Instant Sync
@@ -5504,7 +5517,7 @@
         if (profileEventCustomBox) {
           profileEventCustomBox.hidden = val !== 'custom';
         }
-        const cfg = EVENT_TYPE_CONFIG[val] || EVENT_TYPE_CONFIG.birthday;
+        const cfg = EVENT_TYPE_CONFIG[val] || EVENT_TYPE_CONFIG.general;
         if (hostEmojiSelect) {
           hostEmojiSelect.value = cfg.emoji;
         }
@@ -5880,6 +5893,9 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    try {
+      localStorage.removeItem('bday_multi_recent_fundings_v1');
+    } catch (e) {}
     try {
       getFanfareAudioElement();
     } catch (e) {}
