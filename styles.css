@@ -5446,3 +5446,320 @@ body:not(.is-admin-mode) .admin-only-ui {
   }
 }
 
+/* ==========================================================================
+   Find My Funding Modal & Created Success Enhancements
+   ========================================================================== */
+.existing-funding-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+/* Big Hero Share URL Box */
+.issued-url-hero-box {
+  background: #FFFFFF;
+  border: 2px solid var(--pink-main);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  margin: 16px 0 14px;
+  text-align: left;
+  box-shadow: 0 4px 14px rgba(201, 134, 145, 0.14);
+}
+
+.issued-url-hero-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.issued-hero-badge {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: var(--pink-deep);
+}
+
+.issued-id-badge {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.issued-id-badge strong {
+  font-family: var(--font-numeric);
+  color: var(--text-primary);
+}
+
+.issued-url-hero-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.issued-url-input-lg {
+  flex: 1;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 10px 12px;
+  background: var(--bg-well);
+  border: 1px solid var(--border-hairline);
+  color: var(--pink-deep);
+}
+
+.btn-copy-hero {
+  padding: 10px 18px;
+  font-size: 0.92rem;
+  font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.issued-hero-tip {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  margin: 8px 0 0;
+}
+
+/* Safe Recovery Code Card */
+.issued-recovery-card {
+  background: #FFFDF7;
+  border: 1.5px solid #E5C158;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  text-align: left;
+  box-shadow: 0 2px 8px rgba(229, 193, 88, 0.12);
+}
+
+.recovery-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.recovery-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #7A5600;
+}
+
+.recovery-code-display-box {
+  background: #FFFFFF;
+  border: 1.5px dashed #E5C158;
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  text-align: center;
+  margin: 6px 0;
+}
+
+.recovery-code-pill {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #8A5A00;
+}
+
+.recovery-help-text {
+  font-size: 0.75rem;
+  color: #8A6D24;
+  margin: 6px 0 0;
+  line-height: 1.4;
+}
+
+/* Find My Funding Dialog & Tabs */
+.find-funding-dialog {
+  max-width: 580px;
+  width: 92%;
+}
+
+.find-tabs-bar {
+  margin-bottom: 14px;
+}
+
+.panel-desc-note {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  background: var(--bg-well);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  line-height: 1.45;
+}
+
+/* My Fundings List */
+.my-fundings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.my-funding-card {
+  background: #FFFFFF;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.my-funding-card:hover {
+  border-color: var(--pink-main);
+  box-shadow: 0 3px 10px rgba(201, 134, 145, 0.12);
+}
+
+.my-funding-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.my-funding-name {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.my-funding-meta {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.my-funding-id-text {
+  font-family: var(--font-numeric);
+  font-size: 0.75rem;
+  color: var(--pink-deep);
+  font-weight: 700;
+}
+
+.my-funding-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border-hairline);
+  flex-wrap: wrap;
+}
+
+.my-fundings-empty {
+  text-align: center;
+  padding: 30px 16px;
+  color: var(--text-muted);
+}
+
+.my-fundings-empty .empty-icon {
+  font-size: 2.2rem;
+  margin-bottom: 8px;
+}
+
+.my-fundings-empty .empty-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.my-fundings-empty .empty-sub {
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+/* Recovery Code Input & Result Card */
+.recovery-input-box {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.recovery-result-card {
+  background: #FFFDF9;
+  border: 1.5px solid var(--pink-main);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-top: 16px;
+  text-align: left;
+  box-shadow: 0 4px 12px rgba(201, 134, 145, 0.12);
+}
+
+.recovery-result-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--pink-soft);
+  color: var(--pink-deep);
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  margin-bottom: 8px;
+}
+
+.recovery-result-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.recovery-result-meta {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.recovery-result-url-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.recovery-result-notice {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .issued-url-hero-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .btn-copy-hero {
+    width: 100%;
+    text-align: center;
+  }
+  .recovery-code-pill {
+    font-size: 0.95rem;
+  }
+  .my-funding-actions-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .my-funding-actions-row button {
+    width: 100%;
+  }
+}
+

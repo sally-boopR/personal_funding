@@ -33,6 +33,7 @@
   const SUPABASE_CONN_STORAGE_KEY = 'bday_multi_supabase_conn_v1';
   const CHEERED_IDS_STORAGE_KEY = 'bday_multi_cheered_ids_v1';
   const OWNER_SESSION_PREFIX = 'bday_multi_owner_token_v1_';
+  const MY_CREATED_FUNDINGS_STORAGE_KEY = 'bday_my_created_fundings_v1';
   const DEFAULT_BUCKET_NAME = 'gift-image';
   const MAX_UPLOAD_FILE_BYTES = 5 * 1024 * 1024; // 5MB file size limit (matches storage.buckets limit)
 
@@ -431,6 +432,104 @@
     } catch (e) {
       // Ignore
     }
+  }
+
+  // =========================================================================
+  // DEVICE-CREATED FUNDING STORE (My Created Fundings Only, Never Visit History)
+  // =========================================================================
+  function getMyCreatedFundings() {
+    try {
+      const raw = localStorage.getItem(MY_CREATED_FUNDINGS_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  }
+
+  function saveMyCreatedFundings(list) {
+    try {
+      localStorage.setItem(MY_CREATED_FUNDINGS_STORAGE_KEY, JSON.stringify(list || []));
+    } catch (e) {}
+  }
+
+  function addMyCreatedFunding(item) {
+    if (!item || !item.id) return;
+    try {
+      let list = getMyCreatedFundings();
+      // Remove duplicate if already present
+      list = list.filter((x) => x.id !== item.id);
+      list.unshift({
+        id: item.id,
+        hostName: item.hostName || '주인공',
+        eventType: item.eventType || 'general',
+        headline: item.headline || `${item.hostName || '주인공'}의 선물 펀딩`,
+        createdAt: item.createdAt || new Date().toISOString()
+      });
+      // Limit to 50 max
+      if (list.length > 50) list = list.slice(0, 50);
+      saveMyCreatedFundings(list);
+    } catch (e) {}
+  }
+
+  function removeMyCreatedFunding(id) {
+    if (!id) return;
+    try {
+      let list = getMyCreatedFundings();
+      list = list.filter((x) => x.id !== id);
+      saveMyCreatedFundings(list);
+    } catch (e) {}
+  }
+
+  function migrateLegacyDeviceCampaigns() {
+    try {
+      let list = getMyCreatedFundings();
+      const existingIds = new Set(list.map((x) => x.id));
+      let changed = false;
+
+      // Scan sessionStorage and localStorage for any stored owner tokens
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith(OWNER_SESSION_PREFIX)) {
+          const cid = key.replace(OWNER_SESSION_PREFIX, '').trim();
+          if (cid && !existingIds.has(cid)) {
+            list.unshift({
+              id: cid,
+              hostName: '내 펀딩',
+              eventType: 'general',
+              headline: '이 기기에서 생성·관리했던 펀딩',
+              createdAt: new Date().toISOString()
+            });
+            existingIds.add(cid);
+            changed = true;
+          }
+        }
+      }
+
+      // Check local multi db as well
+      const localDb = loadLocalMultiDb();
+      if (localDb && localDb.campaigns) {
+        Object.keys(localDb.campaigns).forEach((cid) => {
+          if (!existingIds.has(cid)) {
+            const c = localDb.campaigns[cid]?.campaign || {};
+            list.unshift({
+              id: cid,
+              hostName: c.hostName || '내 펀딩',
+              eventType: c.eventType || 'general',
+              headline: c.headline || '이 기기에서 생성한 펀딩',
+              createdAt: new Date().toISOString()
+            });
+            existingIds.add(cid);
+            changed = true;
+          }
+        });
+      }
+
+      if (changed) {
+        saveMyCreatedFundings(list);
+      }
+    } catch (e) {}
   }
 
   // Local Multi-Campaign Store (Used when testing before connecting Supabase)
@@ -1233,6 +1332,7 @@
     try {
       let issuedCampaignId = '';
       let issuedToken = '';
+      let issuedRecoveryCode = '';
 
       if (isCloudConnected && supabaseClient) {
         let rpcRes = await supabaseClient.rpc('create_funding_campaign', {
@@ -1283,10 +1383,12 @@
 
         issuedCampaignId = data.campaign_id;
         issuedToken = data.session_token || '';
+        issuedRecoveryCode = data.recovery_code || '';
       } else {
         // Local preview fallback
         issuedCampaignId = 'f-' + generateRandomHex(5);
         issuedToken = `local-owner-${issuedCampaignId}-` + generateRandomHex(12);
+        issuedRecoveryCode = 'RC-' + generateRandomHex(2).toUpperCase() + '-' + generateRandomHex(2).toUpperCase() + '-' + generateRandomHex(2).toUpperCase() + '-' + generateRandomHex(2).toUpperCase();
         const salt = generateRandomHex(6);
         const pwHash = computeLocalHash(password, salt);
 
@@ -1310,6 +1412,7 @@
           gifts: createInitialGiftsForCampaign(issuedCampaignId, hostName, eventType),
           contributions: [],
           replies: [],
+          recoveryCode: issuedRecoveryCode,
           ownerPwSalt: salt,
           ownerPwHash: pwHash,
           failedAttempts: 0,
@@ -1378,6 +1481,20 @@
       document.getElementById('createdSuccessTitle').textContent = `${hostName}님의 ${eventLabel} 펀딩이 생성되었습니다!`;
       document.getElementById('issuedFundingIdText').textContent = issuedCampaignId;
       document.getElementById('issuedShareUrlInput').value = shareUrl;
+
+      const rcText = document.getElementById('issuedRecoveryCodeText');
+      if (rcText) {
+        rcText.textContent = issuedRecoveryCode || '발급 완료';
+      }
+
+      // Automatically register into this device's created fundings list
+      addMyCreatedFunding({
+        id: issuedCampaignId,
+        hostName,
+        eventType,
+        headline,
+        createdAt: new Date().toISOString()
+      });
 
       document.getElementById('createFundingFormBox').hidden = true;
       document.getElementById('createdUrlSuccessBox').hidden = false;
@@ -3890,6 +4007,242 @@
     backdrop.setAttribute('aria-hidden', 'true');
   }
 
+  // =========================================================================
+  // FIND MY FUNDING MODAL CONTROLS & RECOVERY
+  // =========================================================================
+  function openFindFundingModal(initialTab = 'my-created') {
+    closeMobileDrawer();
+    const backdrop = document.getElementById('findFundingModalBackdrop');
+    if (!backdrop) return;
+
+    switchFindFundingTab(initialTab);
+    renderMyCreatedFundingsList();
+
+    // Reset recovery lookup form
+    const lookupInp = document.getElementById('recoveryCodeLookupInput');
+    if (lookupInp) lookupInp.value = '';
+    const lookupErr = document.getElementById('recoveryLookupErrorMsg');
+    if (lookupErr) lookupErr.hidden = true;
+    const resultCard = document.getElementById('recoveryResultCard');
+    if (resultCard) resultCard.hidden = true;
+
+    backdrop.hidden = false;
+    backdrop.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeFindFundingModal() {
+    const backdrop = document.getElementById('findFundingModalBackdrop');
+    if (!backdrop) return;
+    backdrop.hidden = true;
+    backdrop.setAttribute('aria-hidden', 'true');
+  }
+
+  function switchFindFundingTab(tabKey) {
+    const tabMy = document.getElementById('tabMyCreatedFundings');
+    const tabRc = document.getElementById('tabRecoveryCodeLookup');
+    const panelMy = document.getElementById('panelMyCreatedFundings');
+    const panelRc = document.getElementById('panelRecoveryCodeLookup');
+
+    if (tabKey === 'recovery' || tabKey === 'recovery-code') {
+      if (tabMy) {
+        tabMy.classList.remove('active');
+        tabMy.setAttribute('aria-selected', 'false');
+      }
+      if (tabRc) {
+        tabRc.classList.add('active');
+        tabRc.setAttribute('aria-selected', 'true');
+      }
+      if (panelMy) panelMy.hidden = true;
+      if (panelRc) panelRc.hidden = false;
+    } else {
+      if (tabRc) {
+        tabRc.classList.remove('active');
+        tabRc.setAttribute('aria-selected', 'false');
+      }
+      if (tabMy) {
+        tabMy.classList.add('active');
+        tabMy.setAttribute('aria-selected', 'true');
+      }
+      if (panelRc) panelRc.hidden = true;
+      if (panelMy) panelMy.hidden = false;
+      renderMyCreatedFundingsList();
+    }
+  }
+
+  function renderMyCreatedFundingsList() {
+    const container = document.getElementById('myFundingsListContainer');
+    const emptyState = document.getElementById('myFundingsEmptyState');
+    if (!container || !emptyState) return;
+
+    const list = getMyCreatedFundings();
+
+    if (list.length === 0) {
+      container.innerHTML = '';
+      container.hidden = true;
+      emptyState.hidden = false;
+      return;
+    }
+
+    container.hidden = false;
+    emptyState.hidden = true;
+
+    container.innerHTML = list
+      .map((item) => {
+        const shareUrl = buildCampaignShareUrl(item.id);
+        const evCfg = EVENT_TYPE_CONFIG[item.eventType] || EVENT_TYPE_CONFIG.general;
+        const emoji = evCfg.emoji || '🎁';
+        const formattedDate = item.createdAt ? new Date(item.createdAt).toLocaleDateString('ko-KR') : '';
+
+        return `
+          <div class="my-funding-card" data-campaign-id="${escapeHtml(item.id)}">
+            <div class="my-funding-title-row">
+              <span class="my-funding-name">
+                <span>${emoji}</span>
+                <span>${escapeHtml(item.hostName)}님의 펀딩</span>
+              </span>
+              <span class="my-funding-meta">${formattedDate ? escapeHtml(formattedDate) : ''}</span>
+            </div>
+            <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4;">
+              ${escapeHtml(item.headline || '')}
+            </div>
+            <div class="my-funding-actions-row">
+              <span class="my-funding-id-text">ID: ${escapeHtml(item.id)}</span>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                <button type="button" class="btn-subtle btn-xs" data-action="remove-my-funding" data-campaign-id="${escapeHtml(item.id)}">
+                  기기에서 삭제
+                </button>
+                <button type="button" class="btn-secondary btn-xs" data-action="copy-my-funding" data-share-url="${escapeHtml(shareUrl)}">
+                  🔗 링크 복사
+                </button>
+                <button type="button" class="btn-primary btn-xs" data-action="go-my-funding" data-campaign-id="${escapeHtml(item.id)}">
+                  👉 바로가기
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+  }
+
+  async function handleRecoveryCodeLookupSubmit(e) {
+    e.preventDefault();
+    const input = document.getElementById('recoveryCodeLookupInput');
+    const errEl = document.getElementById('recoveryLookupErrorMsg');
+    const resultCard = document.getElementById('recoveryResultCard');
+    const submitBtn = document.getElementById('recoveryLookupSubmitBtn');
+
+    if (!input || !errEl || !resultCard) return;
+
+    errEl.hidden = true;
+    resultCard.hidden = true;
+
+    const rawCode = input.value.trim();
+    if (!rawCode) {
+      errEl.textContent = '안전 복구 코드를 입력해 주세요.';
+      errEl.hidden = false;
+      input.focus();
+      return;
+    }
+
+    try {
+      submitBtn.disabled = true;
+      submitBtn.textContent = '🔍 펀딩 찾는 중...';
+
+      let foundCampaign = null;
+
+      if (isCloudConnected && supabaseClient) {
+        const { data, error } = await supabaseClient.rpc('lookup_campaign_by_recovery_code', {
+          p_recovery_code: rawCode
+        });
+
+        if (error || !data || !data.ok) {
+          throw new Error((data && data.message) || (error && error.message) || '일치하는 펀딩을 찾을 수 없습니다.');
+        }
+        foundCampaign = data;
+      } else {
+        // Local mode fallback
+        const cleanUpper = rawCode.toUpperCase();
+        const localDb = loadLocalMultiDb();
+        let matchedId = null;
+
+        Object.keys(localDb.campaigns || {}).forEach((cid) => {
+          const rec = localDb.campaigns[cid];
+          if (rec && rec.recoveryCode && rec.recoveryCode.toUpperCase() === cleanUpper) {
+            matchedId = cid;
+          }
+        });
+
+        if (!matchedId) {
+          throw new Error('일치하는 펀딩을 찾을 수 없습니다. 복구 코드를 확인해 주세요.');
+        }
+
+        const camp = localDb.campaigns[matchedId].campaign;
+        foundCampaign = {
+          campaign_id: matchedId,
+          host_name: camp.hostName,
+          event_type: camp.eventType,
+          headline: camp.headline,
+          created_at: camp.createdAt || new Date().toISOString()
+        };
+      }
+
+      if (!foundCampaign || !foundCampaign.campaign_id) {
+        throw new Error('펀딩 정보를 불러올 수 없습니다.');
+      }
+
+      const campaignId = foundCampaign.campaign_id;
+      const hostName = foundCampaign.host_name || '주인공';
+      const eventType = foundCampaign.event_type || 'general';
+      const headline = foundCampaign.headline || `${hostName}님의 선물 펀딩`;
+      const shareUrl = buildCampaignShareUrl(campaignId);
+
+      // Automatically register to this device's created fundings!
+      addMyCreatedFunding({
+        id: campaignId,
+        hostName,
+        eventType,
+        headline,
+        createdAt: foundCampaign.created_at || new Date().toISOString()
+      });
+
+      // Populate result
+      document.getElementById('recoveryResultTitle').textContent = `${hostName}님의 선물 펀딩`;
+      document.getElementById('recoveryResultMeta').textContent = `고유 ID: ${campaignId} · ${headline}`;
+      document.getElementById('recoveryResultUrlInput').value = shareUrl;
+
+      const copyBtn = document.getElementById('recoveryCopyUrlBtn');
+      if (copyBtn) {
+        copyBtn.onclick = () => {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(shareUrl).then(() => {
+              showToast('🔗 펀딩 링크가 복사되었습니다!');
+            });
+          } else {
+            showToast(`주소: ${shareUrl}`);
+          }
+        };
+      }
+
+      const goBtn = document.getElementById('recoveryGoFundingBtn');
+      if (goBtn) {
+        goBtn.onclick = () => {
+          closeFindFundingModal();
+          navigateToFunding(campaignId);
+        };
+      }
+
+      resultCard.hidden = false;
+      showToast('🎉 펀딩을 성공적으로 찾았습니다! 이 기기 목록에도 등록되었습니다.');
+    } catch (err) {
+      errEl.textContent = err.message || '펀딩 조회에 실패했습니다.';
+      errEl.hidden = false;
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '🔍 펀딩 주소 찾기';
+    }
+  }
+
   async function handleSupabaseConnectSubmit(e) {
     e.preventDefault();
     const rawUrl = document.getElementById('quickSupabaseUrlInput').value.trim();
@@ -4011,6 +4364,18 @@
       document.getElementById('adminPasswordInput').value = '';
       updateAdminModeUI();
       renderApp();
+
+      // Register into this device's created fundings
+      if (currentCampaignId && state.campaign) {
+        addMyCreatedFunding({
+          id: currentCampaignId,
+          hostName: state.campaign.hostName,
+          eventType: state.campaign.eventType,
+          headline: state.campaign.headline,
+          createdAt: new Date().toISOString()
+        });
+      }
+
       showToast(`🔓 ${state.campaign.hostName}님의 펀딩 주인 관리 모드로 전환되었습니다.`);
     } catch (err) {
       errEl.textContent = err.message || '관리 비밀번호 인증에 실패했습니다.';
@@ -5098,6 +5463,92 @@
         navigateToFunding(lastCreatedCampaignId, true);
       }
     });
+
+    const copyRcBtn = document.getElementById('copyRecoveryCodeBtn');
+    if (copyRcBtn) {
+      copyRcBtn.addEventListener('click', () => {
+        const rc = (document.getElementById('issuedRecoveryCodeText')?.textContent || '').trim();
+        if (!rc || rc === '---') return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(rc).then(() => {
+            showToast('🔑 복구 코드가 복사되었습니다! 안전한 곳에 메모해 두세요.');
+          });
+        }
+      });
+    }
+
+    // Find My Funding Triggers & Modal Events
+    const findFundingTriggers = [
+      'topFindFundingBtn',
+      'dropdownFindFundingBtn',
+      'mobileFindFundingBtn',
+      'heroFindFundingBtn'
+    ];
+    findFundingTriggers.forEach((btnId) => {
+      const el = document.getElementById(btnId);
+      if (el) {
+        el.addEventListener('click', () => {
+          const menu = document.getElementById('dataDropdownMenu');
+          if (menu) menu.hidden = true;
+          closeMobileDrawer();
+          openFindFundingModal('my-created');
+        });
+      }
+    });
+
+    const closeFindFundingModalBtn = document.getElementById('closeFindFundingModalBtn');
+    if (closeFindFundingModalBtn) {
+      closeFindFundingModalBtn.addEventListener('click', closeFindFundingModal);
+    }
+    const closeFindFundingFooterBtn = document.getElementById('closeFindFundingFooterBtn');
+    if (closeFindFundingFooterBtn) {
+      closeFindFundingFooterBtn.addEventListener('click', closeFindFundingModal);
+    }
+
+    const tabMyCreated = document.getElementById('tabMyCreatedFundings');
+    if (tabMyCreated) {
+      tabMyCreated.addEventListener('click', () => switchFindFundingTab('my-created'));
+    }
+    const tabRecovery = document.getElementById('tabRecoveryCodeLookup');
+    if (tabRecovery) {
+      tabRecovery.addEventListener('click', () => switchFindFundingTab('recovery-code'));
+    }
+
+    // Delegated actions inside myFundingsListContainer
+    const myFundingsContainer = document.getElementById('myFundingsListContainer');
+    if (myFundingsContainer) {
+      myFundingsContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const cid = btn.getAttribute('data-campaign-id') || btn.getAttribute('data-cid');
+        if (!cid && action !== 'copy-my-funding') return;
+
+        if (action === 'go-my-funding' || action === 'go') {
+          closeFindFundingModal();
+          navigateToFunding(cid, true);
+        } else if (action === 'copy-my-funding' || action === 'copy') {
+          const url = btn.getAttribute('data-share-url') || buildCampaignShareUrl(cid);
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(() => {
+              showToast('🔗 펀딩 링크가 클립보드에 복사되었습니다!');
+            });
+          }
+        } else if (action === 'remove-my-funding' || action === 'remove') {
+          if (confirm('이 기기의 목록에서 삭제하시겠습니까?\n(펀딩 자체나 후원 데이터는 삭제되지 않습니다)')) {
+            removeMyCreatedFunding(cid);
+            renderMyCreatedFundingsList();
+            showToast('목록에서 삭제되었습니다.');
+          }
+        }
+      });
+    }
+
+    // Recovery Code Lookup Form
+    const recoveryLookupForm = document.getElementById('recoveryLookupForm');
+    if (recoveryLookupForm) {
+      recoveryLookupForm.addEventListener('submit', handleRecoveryCodeLookupSubmit);
+    }
 
     // Create Funding Intro Photo Preview & Crop Events
     const createPhotoInput = document.getElementById('createIntroPhotoInput');
@@ -6262,6 +6713,8 @@
         if (e.target === backdrop) {
           if (backdrop.id === 'userGuideModalBackdrop') {
             closeUserGuideModal();
+          } else if (backdrop.id === 'findFundingModalBackdrop') {
+            closeFindFundingModal();
           } else {
             backdrop.hidden = true;
             backdrop.setAttribute('aria-hidden', 'true');
@@ -6278,6 +6731,7 @@
         }
         closeBunnyCelebration();
         closeUserGuideModal();
+        closeFindFundingModal();
         closePledgeModal();
         closeAvatarManageModal();
         closeGiftModal();
@@ -6299,6 +6753,7 @@
     try {
       getFanfareAudioElement();
     } catch (e) {}
+    migrateLegacyDeviceCampaigns();
     bindEvents();
     initSupabaseAndRoute();
   });
