@@ -331,6 +331,7 @@
   let cheeredIdsSet = loadCheeredIds();
   let currentGiftFilter = 'all';
   let currentGiftSort = 'priority';
+  const expandedGiftDescIds = new Set();
   let currentMessageSearch = '';
   let currentMessageGiftFilter = 'all';
   let currentStatusFilter = 'all';
@@ -2246,6 +2247,20 @@
           `
           : '';
 
+        const isExpanded = expandedGiftDescIds.has(gift.id);
+        const hasDesc = Boolean(gift.description && gift.description.trim());
+        const descHtml = hasDesc
+          ? `
+            <div class="gift-desc-wrap">
+              <p class="gift-desc ${isExpanded ? 'is-expanded' : ''}" id="gift-desc-${escapeHtml(gift.id)}">${escapeHtml(gift.description)}</p>
+              <button type="button" class="btn-gift-desc-toggle" data-action="toggle-desc" data-gift-id="${escapeHtml(gift.id)}" ${isExpanded ? 'aria-expanded="true"' : 'aria-expanded="false"'} hidden>
+                <span class="desc-toggle-text">${isExpanded ? '접기' : '전체보기'}</span>
+                <span class="desc-toggle-arrow">${isExpanded ? '▴' : '▾'}</span>
+              </button>
+            </div>
+          `
+          : '';
+
         return `
           <article class="gift-card ${metrics.isCompleted ? 'is-completed' : ''}" data-gift-id="${escapeHtml(gift.id)}">
             <div class="gift-visual visual-theme-${escapeHtml(gift.category || 'cake')}">
@@ -2261,7 +2276,7 @@
               <div>
                 <div class="gift-brand">${escapeHtml(gift.brand || 'GIFT WISHLIST')}</div>
                 <h3 class="gift-title">${escapeHtml(gift.title)}</h3>
-                <p class="gift-desc">${escapeHtml(gift.description)}</p>
+                ${descHtml}
               </div>
 
               <div class="gift-funding-box">
@@ -2294,6 +2309,40 @@
         `;
       })
       .join('');
+
+    updateGiftDescToggles();
+  }
+
+  function updateGiftDescToggles() {
+    const cards = document.querySelectorAll('#wishlistGrid .gift-card');
+    cards.forEach((card) => {
+      const descEl = card.querySelector('.gift-desc');
+      const toggleBtn = card.querySelector('.btn-gift-desc-toggle');
+      if (!descEl || !toggleBtn) return;
+
+      const isExpanded = descEl.classList.contains('is-expanded');
+      if (isExpanded) {
+        descEl.classList.remove('is-expanded');
+      }
+
+      // Check if text exceeds 3 clamped lines
+      const isOverflowing = descEl.scrollHeight > descEl.clientHeight + 1;
+
+      if (isExpanded) {
+        descEl.classList.add('is-expanded');
+      }
+
+      if (isOverflowing) {
+        toggleBtn.hidden = false;
+        const textSpan = toggleBtn.querySelector('.desc-toggle-text');
+        const arrowSpan = toggleBtn.querySelector('.desc-toggle-arrow');
+        if (textSpan) textSpan.textContent = isExpanded ? '접기' : '전체보기';
+        if (arrowSpan) arrowSpan.textContent = isExpanded ? '▴' : '▾';
+        toggleBtn.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+      } else {
+        toggleBtn.hidden = true;
+      }
+    });
   }
 
   function renderParticipantRoster() {
@@ -4771,6 +4820,15 @@
       routeToCurrentView(false);
     });
 
+    // Recalculate gift description truncation toggles on window resize
+    let giftDescResizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(giftDescResizeTimer);
+      giftDescResizeTimer = setTimeout(() => {
+        updateGiftDescToggles();
+      }, 150);
+    });
+
     // Brand Home click: scroll to top if on a funding page, or go to home if on create view
     document.getElementById('brandHome').addEventListener('click', () => {
       closeMobileDrawer();
@@ -5109,6 +5167,32 @@
       if (!btn) return;
       const action = btn.getAttribute('data-action');
       const giftId = btn.getAttribute('data-gift-id');
+
+      if (action === 'toggle-desc') {
+        const card = btn.closest('.gift-card');
+        const descEl = card ? card.querySelector('.gift-desc') : null;
+        if (!card || !descEl) return;
+
+        const isCurrentlyExpanded = expandedGiftDescIds.has(giftId);
+        if (isCurrentlyExpanded) {
+          expandedGiftDescIds.delete(giftId);
+          descEl.classList.remove('is-expanded');
+          btn.setAttribute('aria-expanded', 'false');
+          const textSpan = btn.querySelector('.desc-toggle-text');
+          const arrowSpan = btn.querySelector('.desc-toggle-arrow');
+          if (textSpan) textSpan.textContent = '전체보기';
+          if (arrowSpan) arrowSpan.textContent = '▾';
+        } else {
+          expandedGiftDescIds.add(giftId);
+          descEl.classList.add('is-expanded');
+          btn.setAttribute('aria-expanded', 'true');
+          const textSpan = btn.querySelector('.desc-toggle-text');
+          const arrowSpan = btn.querySelector('.desc-toggle-arrow');
+          if (textSpan) textSpan.textContent = '접기';
+          if (arrowSpan) arrowSpan.textContent = '▴';
+        }
+        return;
+      }
 
       if (action === 'open-pledge') {
         openPledgeModal(giftId);

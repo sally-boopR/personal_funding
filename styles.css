@@ -1907,9 +1907,56 @@ html.intro-fading-out .birthday-intro-overlay {
   color: var(--text-secondary);
   line-height: 1.5;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  white-space: pre-line;
+  overflow-wrap: break-word;
+  word-break: keep-all;
+  margin: 0;
+}
+
+.gift-desc.is-expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
+.gift-desc-wrap {
+  margin-top: 4px;
+}
+
+.btn-gift-desc-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  padding: 4px 6px 4px 0;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--pink-deep, #A96575);
+  cursor: pointer;
+  line-height: 1.2;
+  transition: color 0.15s ease;
+  user-select: none;
+}
+
+.btn-gift-desc-toggle:hover {
+  color: var(--pink-main, #C98691);
+  text-decoration: underline;
+}
+
+.btn-gift-desc-toggle:focus-visible {
+  outline: 2px solid var(--pink-main, #C98691);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.desc-toggle-arrow {
+  font-size: 0.72rem;
+  line-height: 1;
 }
 
 /* Gift Funding Details Box */
