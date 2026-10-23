@@ -321,7 +321,8 @@
         introMessage: ''
       },
       gifts: campaignId ? createInitialGiftsForCampaign(campaignId, cleanName, eventType) : [],
-      contributions: []
+      contributions: [],
+      replies: []
     };
   }
 
@@ -332,6 +333,8 @@
   let currentGiftFilter = 'all';
   let currentGiftSort = 'priority';
   const expandedGiftDescIds = new Set();
+  const openReplyThreadIds = new Set();
+  const openReplyFormIds = new Set();
   let currentMessageSearch = '';
   let currentMessageGiftFilter = 'all';
   let currentStatusFilter = 'all';
@@ -462,6 +465,7 @@
       campaign: { ...state.campaign, id: currentCampaignId },
       gifts: state.gifts,
       contributions: state.contributions,
+      replies: state.replies || [],
       ownerPwSalt: ownerPwSalt || existing.ownerPwSalt || '',
       ownerPwHash: ownerPwHash || existing.ownerPwHash || '',
       failedAttempts: existing.failedAttempts || 0,
@@ -823,6 +827,11 @@
         { event: '*', schema: 'public', table: 'contributions', filter: `campaign_id=eq.${campaignId}` },
         () => fetchCampaignFromSupabase(campaignId, true)
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'contribution_replies', filter: `campaign_id=eq.${campaignId}` },
+        () => fetchCampaignFromSupabase(campaignId, true)
+      )
       .subscribe();
 
     if (pollIntervalId) clearInterval(pollIntervalId);
@@ -884,7 +893,8 @@
             ...c,
             cheeredByMe: cheeredIdsSet.has(c.id)
           }))
-        : []
+        : [],
+      replies: Array.isArray(record.replies) ? record.replies : []
     };
 
     const token = getStoredOwnerSessionToken(campaignId);
@@ -976,6 +986,33 @@
           createdAt: row.created_at_label || formatIsoTimestamp(row.created_at)
         }));
       }
+
+      // Fetch contribution replies (safe fallback if migration not yet applied)
+      let repliesData = [];
+      try {
+        const repliesRes = await supabaseClient
+          .from('contribution_replies')
+          .select('id,campaign_id,contribution_id,author_name,content,is_host,created_at')
+          .eq('campaign_id', campaignId)
+          .eq('is_hidden', false)
+          .order('created_at', { ascending: true });
+        if (!repliesRes.error && Array.isArray(repliesRes.data)) {
+          repliesData = repliesRes.data;
+        }
+      } catch (err) {
+        // Table not yet migrated
+      }
+
+      state.replies = repliesData.map((row) => ({
+        id: row.id,
+        campaignId: row.campaign_id,
+        contributionId: row.contribution_id,
+        authorName: row.author_name || '익명',
+        content: row.content || '',
+        isHost: Boolean(row.is_host),
+        createdAt: row.created_at,
+        createdAtLabel: formatIsoTimestamp(row.created_at)
+      }));
 
       isCloudConnected = true;
       renderApp();
@@ -1272,6 +1309,7 @@
           },
           gifts: createInitialGiftsForCampaign(issuedCampaignId, hostName, eventType),
           contributions: [],
+          replies: [],
           ownerPwSalt: salt,
           ownerPwHash: pwHash,
           failedAttempts: 0,
@@ -2405,6 +2443,13 @@
     const grid = document.getElementById('blessingGrid');
     const giftMap = new Map(state.gifts.map((g) => [g.id, g]));
 
+    const repliesByContribution = new Map();
+    (state.replies || []).forEach((r) => {
+      const list = repliesByContribution.get(r.contributionId) || [];
+      list.push(r);
+      repliesByContribution.set(r.contributionId, list);
+    });
+
     let items = [...state.contributions].reverse();
 
     if (currentStatusFilter === 'pending') {
@@ -2480,8 +2525,39 @@
           ? `<button type="button" class="btn-delete-msg" data-action="delete-pledge" data-pledge-id="${escapeHtml(item.id)}">삭제</button>`
           : '';
 
+        const itemReplies = repliesByContribution.get(item.id) || [];
+        const isThreadOpen = openReplyThreadIds.has(item.id);
+        const isFormOpen = openReplyFormIds.has(item.id);
+        const replyCount = itemReplies.length;
+
+        const repliesListHtml = itemReplies
+          .map((r) => `
+            <div class="reply-item ${r.isHost ? 'is-host' : ''}" data-reply-id="${escapeHtml(r.id)}">
+              <span class="reply-item-branch" aria-hidden="true">↳</span>
+              <div class="reply-bubble">
+                <div class="reply-meta-row">
+                  <div class="reply-author-info">
+                    <strong class="reply-author-name">${escapeHtml(r.authorName)}</strong>
+                    ${r.isHost ? '<span class="reply-host-badge">👑 펀딩 주인</span>' : ''}
+                  </div>
+                  <span class="reply-time">${escapeHtml(r.createdAtLabel || formatIsoTimestamp(r.createdAt))}</span>
+                </div>
+                <p class="reply-text">${escapeHtml(r.content)}</p>
+                <div class="reply-actions-row">
+                  <button type="button" class="btn-report-reply" data-action="report-reply" data-reply-id="${escapeHtml(r.id)}">🚨 신고</button>
+                  ${
+                    isAdminAuthenticated
+                      ? `<button type="button" class="btn-delete-reply" data-action="delete-reply" data-reply-id="${escapeHtml(r.id)}">삭제</button>`
+                      : ''
+                  }
+                </div>
+              </div>
+            </div>
+          `)
+          .join('');
+
         return `
-          <article class="blessing-card ${escapeHtml(themeClass)} ${isApproved ? '' : 'is-pending-card'}">
+          <article class="blessing-card ${escapeHtml(themeClass)} ${isApproved ? '' : 'is-pending-card'}" data-pledge-id="${escapeHtml(item.id)}">
             <div>
               ${depositStatusRowHtml}
 
@@ -2510,15 +2586,38 @@
             </div>
 
             <div class="blessing-footer">
-              <button
-                type="button"
-                class="btn-manage-avatar"
-                data-action="manage-avatar"
-                data-pledge-id="${escapeHtml(item.id)}"
-                title="비밀번호 확인 후 내 프로필 사진 변경 또는 삭제"
-              >
-                📷 사진 변경·삭제
-              </button>
+              <div class="blessing-footer-left">
+                <button
+                  type="button"
+                  class="btn-reply-toggle ${isThreadOpen ? 'active' : ''}"
+                  data-action="toggle-replies"
+                  data-pledge-id="${escapeHtml(item.id)}"
+                  title="답글 보기/접기"
+                >
+                  💬 답글 ${replyCount > 0 ? `<span class="reply-count-badge">${replyCount}</span>` : ''}
+                  <span class="reply-toggle-arrow">${isThreadOpen ? '▴' : '▾'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="btn-open-reply-form"
+                  data-action="open-reply-form"
+                  data-pledge-id="${escapeHtml(item.id)}"
+                  title="답글 달기"
+                >
+                  ✍️ 답글 달기
+                </button>
+
+                <button
+                  type="button"
+                  class="btn-manage-avatar"
+                  data-action="manage-avatar"
+                  data-pledge-id="${escapeHtml(item.id)}"
+                  title="비밀번호 확인 후 내 프로필 사진 변경 또는 삭제"
+                >
+                  📷 사진 변경·삭제
+                </button>
+              </div>
 
               <div class="blessing-actions">
                 <button
@@ -2530,6 +2629,47 @@
                   ❤️ <span>${Number(item.cheers) || 0}</span>
                 </button>
                 ${adminDeleteBtnHtml}
+              </div>
+            </div>
+
+            <!-- Replies Thread Section (1-Level Indented) -->
+            <div class="blessing-replies-wrap ${isThreadOpen ? 'is-open' : ''}" id="repliesWrap-${escapeHtml(item.id)}" ${isThreadOpen ? '' : 'hidden'}>
+              <!-- Reply Input Form Box -->
+              <div class="reply-form-box" id="replyFormBox-${escapeHtml(item.id)}" ${isFormOpen ? '' : 'hidden'}>
+                <form class="reply-submit-form" data-pledge-id="${escapeHtml(item.id)}" novalidate>
+                  <div class="reply-form-header">
+                    <input
+                      type="text"
+                      class="form-input reply-author-input"
+                      placeholder="${isAdminAuthenticated ? escapeHtml(state.campaign.hostName) + ' (주인)' : '닉네임 (최대 20자)'}"
+                      value="${isAdminAuthenticated ? escapeHtml(state.campaign.hostName) : ''}"
+                      maxlength="30"
+                      required
+                    />
+                    ${isAdminAuthenticated ? '<span class="host-verified-pill">👑 펀딩 주인</span>' : ''}
+                  </div>
+                  <div class="reply-form-body">
+                    <textarea
+                      class="form-textarea reply-content-input"
+                      placeholder="${isAdminAuthenticated ? '응원해 주신 분께 따뜻한 감사 답글을 남겨보세요 ♡' : '응원 메시지에 따뜻한 답글을 남겨보세요 (최대 300자)'}"
+                      maxlength="300"
+                      rows="2"
+                      required
+                    ></textarea>
+                  </div>
+                  <div class="reply-form-actions">
+                    <span class="reply-char-hint">0 / 300자</span>
+                    <div style="display: flex; gap: 6px;">
+                      <button type="button" class="btn-subtle btn-xs btn-reply-cancel" data-action="cancel-reply" data-pledge-id="${escapeHtml(item.id)}">취소</button>
+                      <button type="submit" class="btn-primary btn-xs btn-reply-submit">답글 등록</button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Replies List -->
+              <div class="replies-list" id="repliesList-${escapeHtml(item.id)}">
+                ${repliesListHtml || (isFormOpen ? '' : '<div class="no-replies-hint">등록된 답글이 없습니다. [✍️ 답글 달기]를 눌러 첫 답글을 남겨보세요!</div>')}
               </div>
             </div>
           </article>
@@ -3949,6 +4089,7 @@
       await fetchCampaignFromSupabase(currentCampaignId, true);
     } else {
       state.contributions = [];
+      state.replies = [];
       saveCurrentStateToLocalMultiDb();
       renderApp();
     }
@@ -5256,13 +5397,86 @@
 
     document.getElementById('openMessageOnlyModalBtn').addEventListener('click', () => openPledgeModal());
 
-    // Delegated Actions on Blessing Grid (Owner Approval / Unapproval / Delete + Public Cheer / Self Avatar Manage)
+    // Delegated Actions on Blessing Grid (Owner Approval / Unapproval / Delete + Public Cheer / Self Avatar Manage + Replies)
     document.getElementById('blessingGrid').addEventListener('click', async (e) => {
       const btn = e.target.closest('button[data-action]');
       if (!btn) return;
       const action = btn.getAttribute('data-action');
       const pledgeId = btn.getAttribute('data-pledge-id');
-      const target = state.contributions.find((c) => c.id === pledgeId);
+
+      if (action === 'toggle-replies') {
+        if (!pledgeId) return;
+        if (openReplyThreadIds.has(pledgeId)) {
+          openReplyThreadIds.delete(pledgeId);
+        } else {
+          openReplyThreadIds.add(pledgeId);
+        }
+        renderGuestbookSection();
+        return;
+      }
+
+      if (action === 'open-reply-form') {
+        if (!pledgeId) return;
+        openReplyThreadIds.add(pledgeId);
+        openReplyFormIds.add(pledgeId);
+        renderGuestbookSection();
+        const box = document.getElementById(`replyFormBox-${pledgeId}`);
+        if (box) {
+          box.hidden = false;
+          const textarea = box.querySelector('.reply-content-input');
+          if (textarea) textarea.focus();
+        }
+        return;
+      }
+
+      if (action === 'cancel-reply') {
+        if (!pledgeId) return;
+        openReplyFormIds.delete(pledgeId);
+        renderGuestbookSection();
+        return;
+      }
+
+      if (action === 'delete-reply') {
+        const replyId = btn.getAttribute('data-reply-id');
+        if (!replyId) return;
+        if (!requireAdminPermission('답글 삭제')) return;
+        if (window.confirm('이 답글을 삭제할까요?')) {
+          if (isCloudConnected && supabaseClient) {
+            const token = getStoredOwnerSessionToken(currentCampaignId);
+            const { error } = await supabaseClient.rpc('owner_delete_reply', {
+              p_campaign_id: currentCampaignId,
+              p_session_token: token,
+              p_reply_id: replyId
+            });
+            if (error) {
+              showToast(`답글 삭제 실패: ${error.message}`);
+              return;
+            }
+            await fetchCampaignFromSupabase(currentCampaignId, true);
+          } else {
+            state.replies = (state.replies || []).filter((r) => r.id !== replyId);
+            saveCurrentStateToLocalMultiDb();
+            renderGuestbookSection();
+          }
+          showToast('답글이 삭제되었습니다.');
+        }
+        return;
+      }
+
+      if (action === 'report-reply') {
+        const replyId = btn.getAttribute('data-reply-id');
+        if (!replyId) return;
+        if (isCloudConnected && supabaseClient) {
+          await supabaseClient.rpc('report_contribution_reply', {
+            p_campaign_id: currentCampaignId,
+            p_reply_id: replyId
+          });
+        }
+        showToast('🚨 신고가 정상 접수되었습니다. 검토 후 조치됩니다.');
+        return;
+      }
+
+      const target = pledgeId ? state.contributions.find((c) => c.id === pledgeId) : null;
       if (!target) return;
 
       if (action === 'approve-pledge') {
@@ -5363,6 +5577,108 @@
             renderApp();
           }
           showToast('내역이 삭제되었습니다.');
+        }
+      }
+    });
+
+    // Delegated Reply Form Submit on Blessing Grid
+    document.getElementById('blessingGrid').addEventListener('submit', async (e) => {
+      const form = e.target.closest('.reply-submit-form');
+      if (!form) return;
+      e.preventDefault();
+      const pledgeId = form.getAttribute('data-pledge-id');
+      if (!pledgeId) return;
+
+      const authorInp = form.querySelector('.reply-author-input');
+      const contentInp = form.querySelector('.reply-content-input');
+      const submitBtn = form.querySelector('.btn-reply-submit');
+      if (!authorInp || !contentInp) return;
+
+      const author = authorInp.value.trim();
+      const content = contentInp.value.trim();
+
+      if (!author) {
+        showToast('답글 작성자 닉네임을 입력해 주세요.');
+        authorInp.focus();
+        return;
+      }
+      if (author.length > 30) {
+        showToast('닉네임은 최대 30자까지 입력 가능합니다.');
+        authorInp.focus();
+        return;
+      }
+      if (!content) {
+        showToast('답글 내용을 입력해 주세요.');
+        contentInp.focus();
+        return;
+      }
+      if (content.length > 300) {
+        showToast('답글 내용은 최대 300자까지 입력 가능합니다.');
+        contentInp.focus();
+        return;
+      }
+
+      try {
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = '등록 중...';
+        }
+
+        if (isCloudConnected && supabaseClient) {
+          const token = isAdminAuthenticated ? getStoredOwnerSessionToken(currentCampaignId) : '';
+          const { data, error } = await supabaseClient.rpc('create_contribution_reply', {
+            p_campaign_id: currentCampaignId,
+            p_contribution_id: pledgeId,
+            p_author_name: author,
+            p_content: content,
+            p_session_token: token
+          });
+
+          if (error || !data || !data.ok) {
+            throw new Error((data && data.message) || (error && error.message) || '답글 등록에 실패했습니다.');
+          }
+
+          await fetchCampaignFromSupabase(currentCampaignId, true);
+        } else {
+          // Local preview fallback
+          const newReply = {
+            id: 'r-' + generateRandomHex(6),
+            campaignId: currentCampaignId,
+            contributionId: pledgeId,
+            authorName: author,
+            content: content,
+            isHost: isAdminAuthenticated,
+            createdAt: new Date().toISOString(),
+            createdAtLabel: '방금 전'
+          };
+          state.replies = state.replies || [];
+          state.replies.push(newReply);
+          saveCurrentStateToLocalMultiDb();
+        }
+
+        openReplyThreadIds.add(pledgeId);
+        openReplyFormIds.delete(pledgeId);
+        renderGuestbookSection();
+        showToast('💬 답글이 등록되었습니다!');
+      } catch (err) {
+        showToast(`답글 등록 오류: ${err.message}`);
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '답글 등록';
+        }
+      }
+    });
+
+    // Delegated Live Char Counter for Reply Textarea
+    document.getElementById('blessingGrid').addEventListener('input', (e) => {
+      if (e.target.classList.contains('reply-content-input')) {
+        const form = e.target.closest('.reply-submit-form');
+        const hint = form ? form.querySelector('.reply-char-hint') : null;
+        if (hint) {
+          const len = e.target.value.length;
+          hint.textContent = `${len} / 300자`;
+          hint.style.color = len > 300 ? 'var(--accent-danger)' : 'var(--text-muted)';
         }
       }
     });
