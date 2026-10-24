@@ -346,6 +346,15 @@
           </g>
         </svg>
       </div>
+
+      <!-- Action Footer with Confirmation Button (Appears after drumming completes) -->
+      <div class="bunny-action-footer" id="bunnyActionFooter" hidden>
+        <button type="button" class="bunny-confirm-btn" id="bunnyConfirmBtn">
+          <span id="bunnyConfirmBtnIcon">✨</span>
+          <span id="bunnyConfirmBtnText">확인</span>
+        </button>
+        <p class="bunny-confirm-sub" id="bunnyConfirmSub" hidden></p>
+      </div>
     </div>
   </div>
 
@@ -1388,18 +1397,6 @@
                     <div class="remit-method-text">
                       <strong>카카오페이 송금</strong>
                       <span>카카오페이 앱으로 연결</span>
-                    </div>
-                  </div>
-                </label>
-
-                <!-- Toss Option -->
-                <label class="remit-method-option" id="optRemitTossLabel">
-                  <input type="radio" name="selectedRemitMethod" value="toss" id="optRemitToss" class="remit-method-radio" />
-                  <div class="remit-method-card toss-card">
-                    <span class="remit-method-icon">💙</span>
-                    <div class="remit-method-text">
-                      <strong>토스(Toss) 송금</strong>
-                      <span>토스 앱으로 연결</span>
                     </div>
                   </div>
                 </label>

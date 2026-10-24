@@ -807,20 +807,7 @@
         supabaseClient = window.supabase.createClient(cfg.url, cfg.anonKey, {
           auth: { persistSession: false }
         });
-        // 실제 REST 엔드포인트와 테이블 응답 가능 여부를 3.5초 타임아웃과 함께 검증 (모바일/카카오톡 지연 방지)
-        const pingPromise = supabaseClient.from('campaigns').select('id').limit(1);
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Supabase ping timeout (3.5s)')), 3500)
-        );
-        const { error: pingErr } = await Promise.race([pingPromise, timeoutPromise]).catch((e) => ({ error: e }));
-
-        if (pingErr) {
-          lastSupabaseSyncError = pingErr.message || 'Supabase 테이블 조회 실패';
-          console.warn('Supabase 연결 확인 실패:', pingErr);
-          isCloudConnected = false;
-        } else {
-          isCloudConnected = true;
-        }
+        isCloudConnected = true;
       } catch (e) {
         lastSupabaseSyncError = e.message || 'Supabase 클라이언트 초기화 실패';
         console.warn('Supabase 클라이언트 초기화 실패:', e);
@@ -832,7 +819,29 @@
       isCloudConnected = false;
     }
 
+    // 화면 즉시 렌더링 (네트워크 핑 대기로 인한 첫 화면 지연/빈 화면 방지)
     await routeToCurrentView(false);
+
+    // 백그라운드에서 비동기 연결 상태 확인 및 상태 표시등 업데이트
+    if (supabaseClient) {
+      supabaseClient
+        .from('campaigns')
+        .select('id')
+        .limit(1)
+        .then(({ error: pingErr }) => {
+          if (pingErr) {
+            lastSupabaseSyncError = pingErr.message || 'Supabase 테이블 조회 실패';
+            isCloudConnected = false;
+          } else {
+            isCloudConnected = true;
+          }
+          renderCloudStatusPill();
+        })
+        .catch(() => {
+          isCloudConnected = false;
+          renderCloudStatusPill();
+        });
+    }
   }
 
   async function navigateToFunding(campaignId, playIntro = true) {
@@ -2943,18 +2952,18 @@
 
     const optKakao = document.getElementById('optRemitKakaoLabel');
     const optToss = document.getElementById('optRemitTossLabel');
+    if (optToss) optToss.hidden = true;
     const optBank = document.getElementById('optRemitBankLabel');
 
     if (registerBtn) {
       registerBtn.hidden = !isAdminAuthenticated;
     }
 
-    if (validKakaoUrl || validTossUrl || hasBank) {
+    if (validKakaoUrl || hasBank) {
       configuredArea.hidden = false;
       missingArea.hidden = true;
 
       if (optKakao) optKakao.hidden = !validKakaoUrl;
-      if (optToss) optToss.hidden = !validTossUrl;
       if (optBank) {
         optBank.hidden = !hasBank;
         const bankSub = document.getElementById('optRemitBankSubtitle');
@@ -2963,10 +2972,9 @@
         }
       }
 
-      // Check available options
+      // Check available options (KakaoPay and Bank Transfer)
       const availableMethods = [];
       if (validKakaoUrl) availableMethods.push('kakao');
-      if (validTossUrl) availableMethods.push('toss');
       if (hasBank) availableMethods.push('bank');
 
       if (!availableMethods.includes(currentSelectedRemitMethod)) {
@@ -3002,14 +3010,7 @@
       submitLabel = `💛 카카오페이로 ${cleanAmount > 0 ? formatKRW(cleanAmount) + ' ' : ''}송금하기`;
       previewHtml = `
         <div class="remit-method-guide-banner">
-          💛 <strong>카카오페이 송금:</strong> 아래 버튼을 누르면 <strong>응원 메시지가 먼저 안전하게 저장</strong>된 후 카카오페이 송금 화면으로 바로 연결됩니다.
-        </div>
-      `;
-    } else if (currentSelectedRemitMethod === 'toss') {
-      submitLabel = `💙 토스로 ${cleanAmount > 0 ? formatKRW(cleanAmount) + ' ' : ''}송금하기`;
-      previewHtml = `
-        <div class="remit-method-guide-banner">
-          💙 <strong>토스 송금:</strong> 아래 버튼을 누르면 <strong>응원 메시지가 먼저 안전하게 저장</strong>된 후 토스 송금 화면으로 바로 연결됩니다.
+          💛 <strong>카카오페이 송금:</strong> 버튼을 누르면 <strong>응원 메시지와 후원 신청이 먼저 안전하게 저장</strong>되고, 축하 애니메이션 후 <strong>카카오페이 송금 링크</strong>로 이동할 수 있습니다.
         </div>
       `;
     } else if (currentSelectedRemitMethod === 'bank') {
@@ -3021,7 +3022,7 @@
             <strong>계좌번호는 신청 완료 후 바로 안내됩니다</strong>
           </div>
           <p class="brg-desc">
-            아래 <strong>「계좌 확인하고 송금하기」</strong> 버튼을 누르면 <strong>응원 메시지와 후원 신청이 먼저 안전하게 저장</strong>되고, 바로 송금하실 수 있도록 <strong>은행명, 계좌번호, 예금주, 송금 금액 및 복사 버튼</strong>이 크게 안내됩니다.
+            아래 <strong>「계좌 확인하고 송금하기」</strong> 버튼을 누르면 <strong>응원 메시지와 후원 신청이 먼저 안전하게 저장</strong>되고, 축하 애니메이션 후 <strong>은행명, 계좌번호, 예금주, 송금 금액 및 복사 버튼</strong>이 크게 안내됩니다.
           </p>
         </div>
       `;
@@ -3348,27 +3349,20 @@
     const hasBank = Boolean((state.campaign.bankAccount || '').trim());
 
     if (chosenMethod === 'kakao' && !validKakao) {
-      const msg = '펀딩 주인에게 카카오페이 송금 링크가 등록되지 않았습니다. 다른 송금 방법을 선택해 주세요.';
-      errorEl.textContent = msg;
-      errorEl.hidden = false;
-      showToast(`⚠️ ${msg}`);
-      return;
-    }
-    if (chosenMethod === 'toss' && !validToss) {
-      const msg = '펀딩 주인에게 토스 송금 링크가 등록되지 않았습니다. 다른 송금 방법을 선택해 주세요.';
+      const msg = '펀딩 주인에게 카카오페이 송금 링크가 등록되지 않았습니다. 계좌이체를 이용해 주세요.';
       errorEl.textContent = msg;
       errorEl.hidden = false;
       showToast(`⚠️ ${msg}`);
       return;
     }
     if (chosenMethod === 'bank' && !hasBank) {
-      const msg = '펀딩 주인에게 계좌번호가 등록되지 않았습니다. 다른 송금 방법을 선택해 주세요.';
+      const msg = '펀딩 주인에게 계좌번호가 등록되지 않았습니다. 펀딩 주인에게 문의해 주세요.';
       errorEl.textContent = msg;
       errorEl.hidden = false;
       showToast(`⚠️ ${msg}`);
       return;
     }
-    if (!validKakao && !validToss && !hasBank) {
+    if (!validKakao && !hasBank) {
       const msg = '펀딩 주인에게 아직 등록된 송금 계좌나 링크가 없습니다. 펀딩 주인에게 문의해 주세요.';
       errorEl.textContent = msg;
       errorEl.hidden = false;
@@ -3477,11 +3471,11 @@
       // Render the method-specific Remittance Action Card in receipt view
       renderReceiptRemitAction(chosenMethod, amount);
 
-      // Switch to the receipt view immediately
+      // Prepare the receipt view in the background
       document.getElementById('pledgeFormView').hidden = true;
       document.getElementById('pledgeReceiptView').hidden = false;
 
-      // Scroll modal card to top so receipt view is immediately visible
+      // Scroll modal card to top so receipt view is immediately visible when opened
       const modalCard = document.querySelector('#pledgeModalBackdrop .modal-card');
       if (modalCard) {
         modalCard.scrollTop = 0;
@@ -3494,41 +3488,43 @@
       document.getElementById('msgCharCount').textContent = '0';
       resetPledgeAvatarState();
 
-      showToast('💌 응원 메시지가 등록되었습니다! 송금을 완료해 주세요.');
-
-      // Play bunny celebration animation & sound
-      playBunnyCelebration(targetGift);
-
-      // 3. Automated App Launch for Kakao / Toss (Mobile & Desktop friendly)
-      let targetRemitUrl = '';
-      if (chosenMethod === 'kakao') {
-        targetRemitUrl = validKakao;
-      } else if (chosenMethod === 'toss') {
-        targetRemitUrl = validToss;
+      // Temporarily hide the pledge modal backdrop so the rabbit animation has full focus
+      const pledgeBackdrop = document.getElementById('pledgeModalBackdrop');
+      if (pledgeBackdrop) {
+        pledgeBackdrop.hidden = true;
+        pledgeBackdrop.setAttribute('aria-hidden', 'true');
       }
 
-      if (targetRemitUrl) {
-        if (isMobile) {
-          try {
-            window.location.href = targetRemitUrl;
-          } catch (e) {}
-        } else {
-          if (popupWin && !popupWin.closed) {
+      showToast('💌 응원 메시지가 안전하게 등록되었습니다!');
+
+      // Set flag so when rabbit celebration overlay closes, receipt view becomes visible
+      pendingReceiptViewToOpen = true;
+
+      // Play bunny celebration animation & sound with confirm button
+      playBunnyCelebration(targetGift, {
+        mode: chosenMethod,
+        requireConfirm: true,
+        onConfirm: () => {
+          // Reveal receipt view
+          if (pledgeBackdrop) {
+            pledgeBackdrop.hidden = false;
+            pledgeBackdrop.setAttribute('aria-hidden', 'false');
+          }
+          document.getElementById('pledgeReceiptView').hidden = false;
+          if (modalCard) modalCard.scrollTop = 0;
+
+          // If KakaoPay, navigate to host's KakaoPay link upon clicking confirm!
+          if (chosenMethod === 'kakao' && validKakao) {
             try {
-              popupWin.location.href = targetRemitUrl;
+              window.location.href = validKakao;
             } catch (e) {
-              try { window.open(targetRemitUrl, '_blank', 'noopener,noreferrer'); } catch (err2) {}
-            }
-          } else {
-            try {
-              window.open(targetRemitUrl, '_blank', 'noopener,noreferrer');
-            } catch (openErr) {
-              console.log('[Remit] Direct link available on receipt view if popup blocked.');
+              try { window.open(validKakao, '_blank', 'noopener,noreferrer'); } catch (err2) {}
             }
           }
         }
-      }
+      });
     } catch (err) {
+      pendingReceiptViewToOpen = false;
       if (popupWin && !popupWin.closed) {
         try { popupWin.close(); } catch (e) {}
       }
@@ -5486,21 +5482,43 @@
     }, stepTime);
   }
 
+  let pendingReceiptViewToOpen = false;
+  let activeCelebrationConfirmHandler = null;
+
   function closeBunnyCelebration() {
     clearTimeout(bunnyCelebrationTimer1);
     clearTimeout(bunnyCelebrationTimer2);
     clearTimeout(bunnyCelebrationTimer3);
     stopCelebrationFanfare(false);
+    activeCelebrationConfirmHandler = null;
+
     const overlay = document.getElementById('bunnyCelebrationOverlay');
     const dialog = document.getElementById('bunnyCelebrationDialog');
+    const actionFooter = document.getElementById('bunnyActionFooter');
+    if (actionFooter) actionFooter.hidden = true;
     if (dialog) dialog.classList.remove('is-animating', 'is-triumph', 'is-fading-out');
     if (overlay) {
       overlay.hidden = true;
       overlay.setAttribute('aria-hidden', 'true');
     }
+
+    if (pendingReceiptViewToOpen) {
+      pendingReceiptViewToOpen = false;
+      const pledgeBackdrop = document.getElementById('pledgeModalBackdrop');
+      if (pledgeBackdrop) {
+        pledgeBackdrop.hidden = false;
+        pledgeBackdrop.setAttribute('aria-hidden', 'false');
+      }
+      const receiptView = document.getElementById('pledgeReceiptView');
+      if (receiptView) receiptView.hidden = false;
+      const formView = document.getElementById('pledgeFormView');
+      if (formView) formView.hidden = true;
+      const modalCard = document.querySelector('#pledgeModalBackdrop .modal-card');
+      if (modalCard) modalCard.scrollTop = 0;
+    }
   }
 
-  function playBunnyCelebration(gift = null) {
+  function playBunnyCelebration(gift = null, options = {}) {
     if (gift) {
       lastPledgedGift = gift;
     }
@@ -5511,7 +5529,20 @@
     const badgeEl = document.getElementById('bunnyBubbleBadge');
     const titleEl = document.getElementById('bunnyBubbleTitle');
     const giftEl = document.getElementById('bunnyBubbleGift');
+    const actionFooter = document.getElementById('bunnyActionFooter');
+    const confirmBtn = document.getElementById('bunnyConfirmBtn');
+    const confirmBtnIcon = document.getElementById('bunnyConfirmBtnIcon');
+    const confirmBtnText = document.getElementById('bunnyConfirmBtnText');
+    const confirmSub = document.getElementById('bunnyConfirmSub');
+
     if (!overlay || !dialog) return;
+
+    const isKakaoRemit = options.mode === 'kakao';
+    const isBankRemit = options.mode === 'bank';
+    const requireConfirm = Boolean(options.requireConfirm || isKakaoRemit || isBankRemit);
+
+    if (actionFooter) actionFooter.hidden = true;
+    if (confirmSub) confirmSub.hidden = true;
 
     if (badgeEl) {
       badgeEl.textContent = '✨ THANK YOU! ♡ ✨';
@@ -5520,7 +5551,13 @@
       titleEl.textContent = '소중한 마음 고마워요! ♡';
     }
     if (giftEl) {
-      giftEl.textContent = '후원 신청이 접수되었어요! 입금 확인 후 선물에 마음이 더해질 거예요.';
+      if (isKakaoRemit) {
+        giftEl.textContent = '응원 메시지와 후원 신청이 등록되었어요! 북 치기가 끝나면 카카오페이로 송금해 주세요.';
+      } else if (isBankRemit) {
+        giftEl.textContent = '응원 메시지와 후원 신청이 등록되었어요! 북 치기가 끝나면 입금 계좌를 안내해 드릴게요.';
+      } else {
+        giftEl.textContent = '후원 신청이 접수되었어요! 입금 확인 후 선물에 마음이 더해질 거예요.';
+      }
     }
 
     // Force CSS reflow so animation restarts cleanly from frame 0 every time
@@ -5542,24 +5579,61 @@
       launchConfetti();
     }, 2300);
 
-    // 3.6s: Soft fade-out slide down & 토끼 퇴장 시 팡파르 소리도 자연스럽게 페이드아웃
-    bunnyCelebrationTimer2 = setTimeout(() => {
-      dialog.classList.add('is-fading-out');
-      stopCelebrationFanfare(true);
-    }, 3600);
+    if (requireConfirm) {
+      // 2.8s: Drumming concludes. Show '확인' button! Do NOT auto-dismiss or auto-redirect!
+      bunnyCelebrationTimer2 = setTimeout(() => {
+        if (actionFooter && confirmBtn) {
+          if (isKakaoRemit) {
+            confirmBtn.className = 'bunny-confirm-btn btn-kakao-style';
+            if (confirmBtnIcon) confirmBtnIcon.textContent = '💛';
+            if (confirmBtnText) confirmBtnText.textContent = '확인 (카카오페이 송금하기)';
+            if (confirmSub) {
+              confirmSub.hidden = false;
+              confirmSub.textContent = '확인 버튼을 누르면 카카오페이 송금 링크로 이동합니다.';
+            }
+          } else if (isBankRemit) {
+            confirmBtn.className = 'bunny-confirm-btn';
+            if (confirmBtnIcon) confirmBtnIcon.textContent = '🏦';
+            if (confirmBtnText) confirmBtnText.textContent = '확인 (계좌번호 보기)';
+            if (confirmSub) {
+              confirmSub.hidden = false;
+              confirmSub.textContent = '확인 버튼을 누르면 입금하실 계좌번호와 예금주를 안내해 드립니다.';
+            }
+          } else {
+            confirmBtn.className = 'bunny-confirm-btn';
+            if (confirmBtnIcon) confirmBtnIcon.textContent = '✨';
+            if (confirmBtnText) confirmBtnText.textContent = '확인';
+            if (confirmSub) confirmSub.hidden = true;
+          }
+          actionFooter.hidden = false;
 
-    // 4.0s: Clean up and hide
-    bunnyCelebrationTimer3 = setTimeout(() => {
-      closeBunnyCelebration();
-      // 후원 모달이 열려있는 중에는 첫 방문 가이드 팝업을 띄우지 않음
-      const pledgeBackdrop = document.getElementById('pledgeModalBackdrop');
-      const isPledgeModalOpen = pledgeBackdrop && !pledgeBackdrop.hidden;
-      if (!isUserGuideDismissed() && !isIntroActive() && !isPledgeModalOpen) {
-        setTimeout(() => {
-          if (!isIntroActive()) openUserGuideModal();
-        }, 400);
-      }
-    }, 4000);
+          activeCelebrationConfirmHandler = () => {
+            closeBunnyCelebration();
+            if (typeof options.onConfirm === 'function') {
+              options.onConfirm();
+            }
+          };
+        }
+      }, 2800);
+    } else {
+      // Non-pledge auto fade-out (3.6s fade out, 4.0s close)
+      bunnyCelebrationTimer2 = setTimeout(() => {
+        dialog.classList.add('is-fading-out');
+        stopCelebrationFanfare(true);
+      }, 3600);
+
+      // 4.0s: Clean up and hide
+      bunnyCelebrationTimer3 = setTimeout(() => {
+        closeBunnyCelebration();
+        const pledgeBackdrop = document.getElementById('pledgeModalBackdrop');
+        const isPledgeModalOpen = pledgeBackdrop && !pledgeBackdrop.hidden;
+        if (!isUserGuideDismissed() && !isIntroActive() && !isPledgeModalOpen) {
+          setTimeout(() => {
+            if (!isIntroActive()) openUserGuideModal();
+          }, 400);
+        }
+      }, 4000);
+    }
   }
 
   function checkUncelebratedGiftsOnLoad() {
@@ -7038,6 +7112,16 @@
     const bunnyBackdrop = document.getElementById('bunnyCelebrationBackdrop');
     if (bunnyBackdrop) {
       bunnyBackdrop.addEventListener('click', closeBunnyCelebration);
+    }
+    const bunnyConfirmBtn = document.getElementById('bunnyConfirmBtn');
+    if (bunnyConfirmBtn) {
+      bunnyConfirmBtn.addEventListener('click', () => {
+        if (typeof activeCelebrationConfirmHandler === 'function') {
+          activeCelebrationConfirmHandler();
+        } else {
+          closeBunnyCelebration();
+        }
+      });
     }
 
     document.querySelectorAll('.modal-backdrop').forEach((backdrop) => {
