@@ -858,7 +858,7 @@
           </div>
 
           <p class="hero-description" id="heroBio">
-            받고 싶은 위시리스트에 원하는 금액만큼 마음을 보태주세요. 프로필 사진과 축하 메시지를 남기고 송금 후 「송금했어요」를 눌러주시면 입금 확인을 거쳐 달성률에 반영됩니다.
+            받고 싶은 위시리스트에 원하는 금액만큼 마음을 보태주세요. 응원 메시지와 함께 송금하시면 입금 확인을 거쳐 달성률에 반영됩니다.
           </p>
 
           <div class="hero-cta-group">
@@ -1279,12 +1279,13 @@
             </div>
           </div>
 
-          <!-- 5. Remittance Step Box -->
+          <!-- 5. Remittance Method Selection -->
           <div class="toss-remit-box" id="tossRemitBox">
             <div class="toss-remit-header">
               <div class="toss-remit-title-row">
-                <span class="toss-step-badge">STEP 1 · 송금하기</span>
-                <strong>받는 분: <span class="recipient-highlight" id="remitRecipientName">-</span></strong>
+                <span class="remit-step-number-badge">5</span>
+                <strong>송금 방법 선택</strong>
+                <span class="remit-recipient-tag">받는 분: <strong class="recipient-highlight" id="remitRecipientName">-</strong></span>
               </div>
               <div class="remit-header-actions">
                 <button type="button" class="btn-copy-amount" id="copyAmountBtn" title="선택한 금액 복사">
@@ -1298,48 +1299,63 @@
 
             <!-- Remittance Purpose Callout -->
             <div class="remit-purpose-callout" id="remitPurposeCallout">
-              💡 <strong>주인공</strong>님의 선물을 위한 송금 계좌입니다. 송금 전 예금주(<strong>주인공</strong>)가 맞는지 꼭 확인해 주세요.
+              💡 <strong>주인공</strong>님의 선물을 위한 송금입니다. 송금 전 예금주(<strong>주인공</strong>)가 맞는지 꼭 확인해 주세요.
             </div>
 
-            <!-- Configured Remittance Methods -->
+            <!-- Configured Remittance Area -->
             <div id="remitConfiguredArea">
               <p class="toss-guide-text">
-                아래 수단 중 편한 방법으로 <strong id="guideRecipientName">-</strong>님에게 <strong id="guideSelectedAmount">30,000원</strong>을 송금해 주세요.
+                송금하실 수단을 선택해 주세요. 아래 <strong>「송금하기」</strong>를 누르면 <strong>응원 메시지가 먼저 안전하게 저장</strong>된 후 송금 앱/계좌 안내로 바로 연결됩니다.
               </p>
 
-              <!-- Bank Account Card -->
-              <div class="bank-account-card" id="bankAccountDisplayCard" hidden>
-                <div class="bank-account-info">
-                  <span class="bank-badge">계좌송금</span>
-                  <div class="bank-text-wrap">
-                    <strong id="bankAccountTextDisplay">-</strong>
-                    <span class="bank-holder-text">예금주: <strong id="bankHolderDisplay">-</strong></span>
+              <!-- Remittance Methods Radio Grid -->
+              <div class="remit-method-radios" id="remitMethodRadios" role="radiogroup" aria-label="송금 수단 선택">
+                <!-- Kakao Option -->
+                <label class="remit-method-option" id="optRemitKakaoLabel">
+                  <input type="radio" name="selectedRemitMethod" value="kakao" id="optRemitKakao" class="remit-method-radio" />
+                  <div class="remit-method-card kakao-card">
+                    <span class="remit-method-icon">💛</span>
+                    <div class="remit-method-text">
+                      <strong>카카오페이 송금</strong>
+                      <span>카카오페이 앱으로 연결</span>
+                    </div>
                   </div>
-                </div>
-                <button type="button" class="btn-copy-bank" id="copyBankAccountBtn">
-                  📋 계좌 복사
-                </button>
+                </label>
+
+                <!-- Toss Option -->
+                <label class="remit-method-option" id="optRemitTossLabel">
+                  <input type="radio" name="selectedRemitMethod" value="toss" id="optRemitToss" class="remit-method-radio" />
+                  <div class="remit-method-card toss-card">
+                    <span class="remit-method-icon">💙</span>
+                    <div class="remit-method-text">
+                      <strong>토스(Toss) 송금</strong>
+                      <span>토스 앱으로 연결</span>
+                    </div>
+                  </div>
+                </label>
+
+                <!-- Bank Account Option -->
+                <label class="remit-method-option" id="optRemitBankLabel">
+                  <input type="radio" name="selectedRemitMethod" value="bank" id="optRemitBank" class="remit-method-radio" />
+                  <div class="remit-method-card bank-card">
+                    <span class="remit-method-icon">🏦</span>
+                    <div class="remit-method-text">
+                      <strong>계좌이체 / 무통장</strong>
+                      <span id="optRemitBankSubtitle">계좌번호 복사 송금</span>
+                    </div>
+                  </div>
+                </label>
               </div>
 
-              <!-- Remittance Link Buttons -->
-              <div class="remit-links-grid" id="remitLinksGrid">
-                <button type="button" class="btn-kakao-open" id="openKakaoLinkBtn" hidden>
-                  <span id="openKakaoLinkBtnText">💛 카카오페이로 송금하기</span>
-                </button>
-
-                <button type="button" class="btn-toss-open" id="openTossLinkBtn" hidden>
-                  <span id="openTossLinkBtnText">💙 토스로 송금하기</span>
-                </button>
-              </div>
-
-              <div class="toss-opened-feedback" id="tossOpenedFeedback" hidden>
-                ✅ 송금 안내를 확인했습니다. 송금을 마친 후 아래 <strong>「송금했어요」</strong> 버튼을 눌러주세요!
+              <!-- Selected Method Preview / Guide Box -->
+              <div class="selected-method-preview-box" id="selectedMethodPreviewBox">
+                <!-- Dynamic bank account display or app launch guide rendered by JS -->
               </div>
             </div>
 
             <!-- Missing Remittance Notice -->
             <div class="toss-link-missing-box" id="tossLinkMissingArea" hidden>
-              <div class="missing-title">아직 송금 링크나 계좌번호가 등록되지 않았습니다.</div>
+              <div class="missing-title">아직 송금 계좌나 링크가 등록되지 않았습니다.</div>
               <p class="missing-desc">
                 펀딩 주인에게 송금 수단 등록을 요청하거나, 펀딩 주인이라면 아래 버튼으로 바로 등록해 주세요.
               </p>
@@ -1353,36 +1369,41 @@
 
           <div class="form-error-msg" id="pledgeErrorMsg" hidden></div>
 
-          <!-- 6. "송금했어요" Submit Step -->
+          <!-- Single Streamlined Submit Step (Removed confusing '송금했어요' step!) -->
           <div class="modal-footer pledge-modal-footer">
-            <div class="pledge-footer-notice">
-              <span class="step2-badge">STEP 2</span>
-              <span>송금 후 아래 버튼을 누르면 <strong>'입금 확인 대기'</strong>로 저장되며, 펀딩 주인 승인 후 달성률에 반영됩니다.</span>
+            <div class="pledge-streamlined-notice">
+              <span class="notice-icon">💌</span>
+              <span><strong>'송금하기'</strong>를 누르면 <strong>응원 메시지와 후원 신청이 먼저 안전하게 저장</strong>된 후 송금으로 이동합니다. 송금 앱에서 사이트로 돌아오지 않아도 메시지는 즉시 방명록에 등록됩니다.</span>
             </div>
             <div class="pledge-footer-buttons">
               <button type="button" class="btn-secondary" id="cancelPledgeBtn">취소</button>
               <button type="submit" class="btn-primary btn-lg btn-submit-pledge" id="submitSentBtn">
-                <span id="submitPledgeBtnText">💸 송금했어요 (입금 확인 요청)</span>
+                <span id="submitPledgeBtnText">💌 응원 메시지 남기고 송금하기</span>
               </button>
             </div>
           </div>
         </form>
       </div>
 
-      <!-- Step 2: Pending Deposit Confirmation View -->
+      <!-- Remittance Action & Confirmation View (Immediately shown after saving) -->
       <div id="pledgeReceiptView" hidden>
         <div class="receipt-card">
           <div class="receipt-avatar-wrap" id="receiptAvatarWrap"></div>
-          <span class="receipt-status-pill">입금 확인 대기 상태</span>
-          <h3 class="receipt-title">펀딩 참여 내역이 접수되었습니다!</h3>
+          <span class="receipt-status-pill">💌 응원 메시지 등록 완료 · 입금 확인 대기</span>
+          <h3 class="receipt-title" id="receiptTitle">응원 메시지가 안전하게 등록되었습니다!</h3>
           <p class="receipt-subtitle" id="receiptStorageNoticeText">
-            현재 <strong>'입금 확인 대기'</strong> 상태입니다. 펀딩 주인이 실제 입금 여부를 확인하고 승인하면 달성률에 최종 반영됩니다.
+            후원 신청이 <strong>'입금 확인 대기'</strong> 상태로 접수되었습니다. 아래 안내에 따라 송금을 완료해 주세요.
           </p>
+
+          <!-- Dynamic Remittance Action Card (Kakao / Toss / Bank) -->
+          <div class="receipt-remit-action-box" id="receiptRemitActionBox">
+            <!-- Dynamic button or bank account card injected by JS -->
+          </div>
 
           <div class="receipt-summary-box">
             <div class="receipt-row">
               <span>진행 상태</span>
-              <strong class="status-text-pending">⏳ 입금 확인 대기 (미반영)</strong>
+              <strong class="status-text-pending">⏳ 입금 확인 대기 (주인공 승인 시 달성률 반영)</strong>
             </div>
             <div class="receipt-row">
               <span>참여자</span>
@@ -1393,12 +1414,12 @@
               <strong id="receiptGiftName">-</strong>
             </div>
             <div class="receipt-row highlight">
-              <span>송금 요청 금액</span>
+              <span>송금할 금액</span>
               <strong id="receiptAmount">₩0</strong>
             </div>
             <div class="receipt-row">
               <span>달성률 반영 안내</span>
-              <strong class="receipt-progress-jump" id="receiptProgressJump">펀딩 주인 승인 시 반영 예정</strong>
+              <strong class="receipt-progress-jump" id="receiptProgressJump">펀딩 주인 실제 입금 확인 후 반영</strong>
             </div>
           </div>
 
@@ -1408,7 +1429,7 @@
             <button type="button" class="btn-replay-celebration-action" id="receiptReplayCelebrationBtn" title="토끼 축하 애니메이션 다시보기">
               <span>🐰 축하 다시보기</span>
             </button>
-            <button type="button" class="btn-primary btn-lg" id="receiptDoneBtn">확인</button>
+            <button type="button" class="btn-primary btn-lg" id="receiptDoneBtn">확인 (펀딩 페이지로 이동)</button>
           </div>
         </div>
       </div>

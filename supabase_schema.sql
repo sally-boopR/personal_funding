@@ -46,15 +46,20 @@ create table if not exists public.campaigns (
   updated_at timestamptz not null default now()
 );
 
--- (2) [비공개] 펀딩 주인 비밀번호 해시 + 로그인 실패 잠금
---     비밀번호 복구/찾기/초기화 기능은 제공하지 않습니다(pgcrypto bcrypt 단방향 해시).
+-- (2) [비공개] 펀딩 주인 비밀번호 해시 + 로그인 실패 잠금 + 안전 복구 코드 해시
+--     비밀번호 복구/초기화 기능 대신, 생성 시 1회 발급되는 안전 복구 코드(해시 저장)로 펀딩 링크 조회를 지원합니다.
 create table if not exists public.campaign_secrets (
   campaign_id text primary key references public.campaigns(id) on delete cascade,
   password_hash text not null,
+  recovery_code_hash text,
   failed_attempts integer not null default 0,
   locked_until timestamptz,
   created_at timestamptz not null default now()
 );
+
+-- 기존 데이터베이스 마이그레이션 호환
+alter table public.campaign_secrets add column if not exists recovery_code_hash text;
+create index if not exists idx_campaign_secrets_recovery_hash on public.campaign_secrets(recovery_code_hash) where recovery_code_hash is not null;
 
 -- (3) [비공개] 펀딩 주인 세션 토큰 (토큰 원문이 아닌 SHA-256 해시만 저장)
 create table if not exists public.campaign_sessions (
@@ -121,6 +126,22 @@ create table if not exists public.rate_limit_logs (
   window_start timestamptz not null default now()
 );
 
+-- (8) 공개 대댓글 (1단계 답글 전용)
+create table if not exists public.contribution_replies (
+  id text primary key,
+  campaign_id text not null references public.campaigns(id) on delete cascade,
+  contribution_id text not null references public.contributions(id) on delete cascade,
+  author_name text not null check (char_length(trim(author_name)) between 1 and 30),
+  content text not null check (char_length(trim(content)) between 1 and 300),
+  is_host boolean not null default false,
+  is_hidden boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_replies_campaign_id on public.contribution_replies(campaign_id);
+create index if not exists idx_replies_contribution_id on public.contribution_replies(contribution_id);
+create index if not exists idx_replies_created_at on public.contribution_replies(created_at asc);
+
 -- ============================================================================
 -- 2. RLS 활성화 및 공개 조회 정책
 --    비공개 테이블 4개(campaign_secrets, campaign_sessions, contribution_secrets,
@@ -131,6 +152,7 @@ alter table public.campaign_secrets enable row level security;
 alter table public.campaign_sessions enable row level security;
 alter table public.gifts enable row level security;
 alter table public.contributions enable row level security;
+alter table public.contribution_replies enable row level security;
 alter table public.contribution_secrets enable row level security;
 alter table public.rate_limit_logs enable row level security;
 
@@ -152,11 +174,20 @@ create policy "contributions_public_select"
   to anon, authenticated
   using (true);
 
+drop policy if exists "replies_public_select" on public.contribution_replies;
+create policy "replies_public_select"
+  on public.contribution_replies for select
+  to anon, authenticated
+  using (is_hidden = false);
+
 -- ============================================================================
 -- 3. 함수 생성
 --    의존성 역순으로 기존 함수를 정리한 뒤 내부 헬퍼 함수 -> 공개 RPC 순으로 생성합니다.
 --    모든 SECURITY DEFINER 함수는 search_path = public, extensions, pg_temp 로 고정합니다.
 -- ============================================================================
+drop function if exists public.create_contribution_reply(text, text, text, text, text);
+drop function if exists public.owner_delete_reply(text, text, text);
+drop function if exists public.report_contribution_reply(text, text);
 drop function if exists public.owner_confirm_intro_deleted(text, text, text);
 drop function if exists public.owner_set_intro_photo(text, text, text, text);
 drop function if exists public.increment_contribution_cheer(text, integer);
@@ -172,6 +203,7 @@ drop function if exists public.owner_update_campaign(text, text, text, text, tex
 drop function if exists public.owner_update_campaign(text, text, text, text, text, text, text, text, text, text, text, text);
 drop function if exists public.logout_campaign_owner(text, text);
 drop function if exists public.login_campaign_owner(text, text);
+drop function if exists public.lookup_campaign_by_recovery_code(text);
 drop function if exists public.create_funding_campaign(text, text, text, text, text, text, text, text, text, text, text, text, text, text);
 drop function if exists public.create_funding_campaign(text, text, text, text, text, text, text, text, text, text, text, text);
 drop function if exists public.owner_check_session(text, text);
@@ -360,6 +392,8 @@ declare
   v_intro_msg text := trim(coalesce(p_intro_message, ''));
   v_event_label text;
   v_raw_token text;
+  v_recovery_code text;
+  v_rc_hash text;
 begin
   if coalesce(p_honeypot, '') <> '' then
     return jsonb_build_object('ok', false, 'message', '비정상적인 요청이 감지되었습니다.');
@@ -435,8 +469,17 @@ begin
     v_intro_msg
   );
 
-  insert into public.campaign_secrets (campaign_id, password_hash)
-  values (v_campaign_id, crypt(v_clean_pw, gen_salt('bf', 10)));
+  -- 고유하고 추측 불가능한 80비트 엔트로피 안전 복구 코드 발급 (원문은 단 1회 사용자에게만 반환)
+  -- DB에는 솔트 네임스페이스가 적용된 SHA-256 해시값만 저장
+  v_recovery_code := 'RC-' ||
+    upper(encode(gen_random_bytes(2), 'hex')) || '-' ||
+    upper(encode(gen_random_bytes(2), 'hex')) || '-' ||
+    upper(encode(gen_random_bytes(2), 'hex')) || '-' ||
+    upper(encode(gen_random_bytes(2), 'hex'));
+  v_rc_hash := encode(digest('bday-rc-v1::' || v_recovery_code, 'sha256'), 'hex');
+
+  insert into public.campaign_secrets (campaign_id, password_hash, recovery_code_hash)
+  values (v_campaign_id, crypt(v_clean_pw, gen_salt('bf', 10)), v_rc_hash);
 
   insert into public.gifts (id, campaign_id, category, priority, title, brand, goal_amount, description, image_url, image_fit)
   values
@@ -447,8 +490,8 @@ begin
      v_clean_name || '의 2순위 위시 선물', '뷰티 / 향수 / 리빙 위시템', 150000,
      '원하는 선물 사진을 업로드하거나 목표 금액과 설명을 자유롭게 수정할 수 있습니다.', '', 'cover'),
     (v_campaign_id || '-gift-3', v_campaign_id, 'cake', 3,
-     v_clean_name || ' 생일 축하 케이크 & 꽃다발', '생일 기념 스페셜', 70000,
-     '생일을 더욱 빛내줄 케이크와 꽃다발 선물 모금입니다.', '', 'cover');
+     v_clean_name || ' ' || v_event_label || ' 축하 선물 & 꽃다발', v_event_label || ' 기념 스페셜', 70000,
+     v_event_label || '를 더욱 빛내줄 축하 선물 모금입니다.', '', 'cover');
 
   v_raw_token := encode(gen_random_bytes(32), 'hex');
 
@@ -462,7 +505,8 @@ begin
   return jsonb_build_object(
     'ok', true,
     'campaign_id', v_campaign_id,
-    'session_token', v_raw_token
+    'session_token', v_raw_token,
+    'recovery_code', v_recovery_code
   );
 end;
 $$;
@@ -547,6 +591,87 @@ begin
   );
 
   return jsonb_build_object('ok', true, 'session_token', v_raw_token);
+end;
+$$;
+
+-- 펀딩 복구 코드로 펀딩 링크 및 기본 정보 조회
+--   - 이름/비밀번호만으로는 조회가 불가능하며, 80비트 고유 복구 코드 해시 일치 시에만 동작합니다.
+--   - 무차별 대입 방지: 동일 클라이언트 10분당 5회 실패 제한 (check_rate_limit)
+--   - 반환 데이터: 펀딩 고유 ID, 제목, 주인공 이름, 이벤트 유형 (관리자 권한 세션 토큰은 절대 반환하지 않음)
+create function public.lookup_campaign_by_recovery_code(
+  p_recovery_code text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions, pg_temp
+as $$
+declare
+  v_raw_code text := upper(trim(coalesce(p_recovery_code, '')));
+  v_clean_code text;
+  v_rc_hash text;
+  v_client_fp text;
+  v_campaign_id text;
+  v_campaign record;
+begin
+  if v_raw_code = '' then
+    return jsonb_build_object('ok', false, 'message', '복구 코드를 입력해 주세요.');
+  end if;
+
+  -- 무차별 대입 방지: 동일 IP/지문 기준 10분당 최대 5회 실패 제한
+  v_client_fp := public.get_client_fingerprint();
+  if not public.check_rate_limit('lookup_rc_ip', v_client_fp, 5, 600) then
+    return jsonb_build_object(
+      'ok', false,
+      'message', '복구 코드 조회 시도 횟수를 초과했습니다. 10분 후 다시 시도해 주세요.'
+    );
+  end if;
+
+  -- 영문/숫자만 추출 후 RC-XXXX-XXXX-XXXX-XXXX 표준 형식 정규화
+  v_clean_code := regexp_replace(v_raw_code, '[^A-Z0-9]', '', 'g');
+  if not v_clean_code like 'RC%' and char_length(v_clean_code) = 16 then
+    v_clean_code := 'RC' || v_clean_code;
+  end if;
+
+  if char_length(v_clean_code) = 18 and v_clean_code like 'RC%' then
+    v_raw_code := 'RC-' || substring(v_clean_code from 3 for 4) || '-' ||
+                           substring(v_clean_code from 7 for 4) || '-' ||
+                           substring(v_clean_code from 11 for 4) || '-' ||
+                           substring(v_clean_code from 15 for 4);
+  end if;
+
+  v_rc_hash := encode(digest('bday-rc-v1::' || v_raw_code, 'sha256'), 'hex');
+
+  select cs.campaign_id
+    into v_campaign_id
+  from public.campaign_secrets cs
+  where cs.recovery_code_hash = v_rc_hash;
+
+  if v_campaign_id is null then
+    return jsonb_build_object(
+      'ok', false,
+      'message', '일치하는 펀딩을 찾을 수 없습니다. 복구 코드를 다시 확인해 주세요.'
+    );
+  end if;
+
+  select id, host_name, event_type, headline, subtitle, created_at
+    into v_campaign
+  from public.campaigns
+  where id = v_campaign_id;
+
+  if not found then
+    return jsonb_build_object('ok', false, 'message', '해당 펀딩의 기본 정보를 찾을 수 없습니다.');
+  end if;
+
+  return jsonb_build_object(
+    'ok', true,
+    'campaign_id', v_campaign.id,
+    'host_name', v_campaign.host_name,
+    'event_type', v_campaign.event_type,
+    'headline', v_campaign.headline,
+    'subtitle', v_campaign.subtitle,
+    'created_at', v_campaign.created_at
+  );
 end;
 $$;
 
@@ -1211,6 +1336,135 @@ begin
 end;
 $$;
 
+-- ---------------------------------------------------------------------------
+-- 3-D. 응원 메시지 대댓글(Reply) 관련 함수
+-- ---------------------------------------------------------------------------
+
+-- 대댓글 작성 RPC 함수
+create function public.create_contribution_reply(
+  p_campaign_id text,
+  p_contribution_id text,
+  p_author_name text,
+  p_content text,
+  p_session_token text default ''
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions, pg_temp
+as $$
+declare
+  v_cid text := trim(coalesce(p_campaign_id, ''));
+  v_pid text := trim(coalesce(p_contribution_id, ''));
+  v_author text := trim(coalesce(p_author_name, ''));
+  v_content text := trim(coalesce(p_content, ''));
+  v_token text := trim(coalesce(p_session_token, ''));
+  v_is_host boolean := false;
+  v_target_cid text;
+  v_reply_id text;
+  v_client_fp text;
+begin
+  if v_cid = '' or v_pid = '' then
+    return jsonb_build_object('ok', false, 'message', '잘못된 요청입니다.');
+  end if;
+
+  if char_length(v_author) < 1 or char_length(v_author) > 30 then
+    return jsonb_build_object('ok', false, 'message', '닉네임은 1자 이상 30자 이하로 입력해 주세요.');
+  end if;
+
+  if char_length(v_content) < 1 or char_length(v_content) > 300 then
+    return jsonb_build_object('ok', false, 'message', '답글 내용은 1자 이상 300자 이하로 입력해 주세요.');
+  end if;
+
+  -- 1. 스팸 방지 레이트 리밋 (동일 클라이언트 1분당 최대 10회)
+  v_client_fp := public.get_client_fingerprint();
+  if not public.check_rate_limit('create_reply_ip', v_client_fp, 10, 60) then
+    return jsonb_build_object('ok', false, 'message', '답글 작성 요청이 너무 많습니다. 1분 후 다시 시도해 주세요.');
+  end if;
+
+  -- 2. 원본 응원 메시지 검증 (타 펀딩 댓글 참조 불가)
+  select campaign_id into v_target_cid
+  from public.contributions
+  where id = v_pid;
+
+  if v_target_cid is null or v_target_cid <> v_cid then
+    return jsonb_build_object('ok', false, 'message', '해당 펀딩의 원본 응원 메시지를 찾을 수 없습니다.');
+  end if;
+
+  -- 3. 펀딩 주인(관리자) 세션 토큰 검증
+  if v_token <> '' then
+    v_is_host := public.verify_campaign_session(v_cid, v_token);
+  end if;
+
+  -- 4. 고유 ID 생성 (r-xxxxxx)
+  v_reply_id := 'r-' || encode(gen_random_bytes(6), 'hex');
+
+  insert into public.contribution_replies (
+    id, campaign_id, contribution_id, author_name, content, is_host, is_hidden, created_at
+  ) values (
+    v_reply_id, v_cid, v_pid, v_author, v_content, v_is_host, false, now()
+  );
+
+  return jsonb_build_object(
+    'ok', true,
+    'reply_id', v_reply_id,
+    'author_name', v_author,
+    'content', v_content,
+    'is_host', v_is_host,
+    'created_at', now()
+  );
+end;
+$$;
+
+-- 펀딩 주인(관리자)의 답글 삭제 RPC 함수
+create function public.owner_delete_reply(
+  p_campaign_id text,
+  p_session_token text,
+  p_reply_id text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions, pg_temp
+as $$
+declare
+  v_cid text := trim(coalesce(p_campaign_id, ''));
+  v_token text := trim(coalesce(p_session_token, ''));
+  v_rid text := trim(coalesce(p_reply_id, ''));
+begin
+  if not public.verify_campaign_session(v_cid, v_token) then
+    return jsonb_build_object('ok', false, 'message', '관리자 권한이 없습니다.');
+  end if;
+
+  delete from public.contribution_replies
+  where id = v_rid and campaign_id = v_cid;
+
+  return jsonb_build_object('ok', true);
+end;
+$$;
+
+-- 일반 방문자의 답글 신고 접수 RPC 함수 (스팸/부적절한 내용)
+create function public.report_contribution_reply(
+  p_campaign_id text,
+  p_reply_id text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions, pg_temp
+as $$
+declare
+  v_client_fp text;
+begin
+  v_client_fp := public.get_client_fingerprint();
+  if not public.check_rate_limit('report_reply_ip', v_client_fp, 10, 600) then
+    return jsonb_build_object('ok', false, 'message', '신고 요청 횟수를 초과했습니다. 잠시 후 다시 시도해 주세요.');
+  end if;
+
+  return jsonb_build_object('ok', true, 'message', '신고가 정상 접수되었습니다. 검토 후 조치됩니다.');
+end;
+$$;
+
 -- ============================================================================
 -- 4. 권한 설정
 --    Supabase는 public 스키마의 새 테이블/함수에 기본 권한을 자동 부여하므로,
@@ -1218,14 +1472,14 @@ $$;
 -- ============================================================================
 grant usage on schema public to anon, authenticated;
 
--- (1) 테이블: 공개 3개는 SELECT만 허용, 비공개 4개는 접근 완전 차단
+-- (1) 테이블: 공개 4개는 SELECT만 허용, 비공개 4개는 접근 완전 차단
 revoke all on table
-  public.campaigns, public.gifts, public.contributions,
+  public.campaigns, public.gifts, public.contributions, public.contribution_replies,
   public.campaign_secrets, public.campaign_sessions,
   public.contribution_secrets, public.rate_limit_logs
 from anon, authenticated;
 
-grant select on table public.campaigns, public.gifts, public.contributions to anon, authenticated;
+grant select on table public.campaigns, public.gifts, public.contributions, public.contribution_replies to anon, authenticated;
 
 -- (2) 함수: 모든 함수의 PUBLIC/anon/authenticated 실행 권한 회수
 revoke all on function public.get_client_fingerprint() from public, anon, authenticated;
@@ -1235,6 +1489,7 @@ revoke all on function public.owner_check_session(text, text) from public, anon,
 revoke all on function public.create_funding_campaign(text, text, text, text, text, text, text, text, text, text, text, text, text, text) from public, anon, authenticated;
 revoke all on function public.create_funding_campaign(text, text, text, text, text, text, text, text, text, text, text, text) from public, anon, authenticated;
 revoke all on function public.login_campaign_owner(text, text) from public, anon, authenticated;
+revoke all on function public.lookup_campaign_by_recovery_code(text) from public, anon, authenticated;
 revoke all on function public.logout_campaign_owner(text, text) from public, anon, authenticated;
 revoke all on function public.owner_update_campaign(text, text, text, text, text, text, text, text, text, text, text, text, text, text) from public, anon, authenticated;
 revoke all on function public.owner_update_campaign(text, text, text, text, text, text, text, text, text, text, text, text) from public, anon, authenticated;
@@ -1245,17 +1500,21 @@ revoke all on function public.owner_set_contribution_status(text, text, text, te
 revoke all on function public.owner_delete_contribution(text, text, text) from public, anon, authenticated;
 revoke all on function public.owner_reset_contributions(text, text) from public, anon, authenticated;
 revoke all on function public.create_pending_contribution(text, text, text, text, integer, text, text, text, text, text, text) from public, anon, authenticated;
+revoke all on function public.create_contribution_reply(text, text, text, text, text) from public, anon, authenticated;
+revoke all on function public.owner_delete_reply(text, text, text) from public, anon, authenticated;
+revoke all on function public.report_contribution_reply(text, text) from public, anon, authenticated;
 revoke all on function public.manage_own_avatar(text, text, text, text, text) from public, anon, authenticated;
 revoke all on function public.increment_contribution_cheer(text, integer) from public, anon, authenticated;
 revoke all on function public.owner_set_intro_photo(text, text, text, text) from public, anon, authenticated;
 revoke all on function public.owner_confirm_intro_deleted(text, text, text) from public, anon, authenticated;
 
--- (3) 공개 RPC 15개에만 실행 권한 부여
+-- (3) 공개 RPC에만 실행 권한 부여
 --     ※ get_client_fingerprint / check_rate_limit / verify_campaign_session 은
 --       내부 전용이므로 anon·authenticated 에 실행 권한을 부여하지 않습니다.
 grant execute on function public.owner_check_session(text, text) to anon, authenticated;
 grant execute on function public.create_funding_campaign(text, text, text, text, text, text, text, text, text, text, text, text, text, text) to anon, authenticated;
 grant execute on function public.login_campaign_owner(text, text) to anon, authenticated;
+grant execute on function public.lookup_campaign_by_recovery_code(text) to anon, authenticated;
 grant execute on function public.logout_campaign_owner(text, text) to anon, authenticated;
 grant execute on function public.owner_update_campaign(text, text, text, text, text, text, text, text, text, text, text, text, text, text) to anon, authenticated;
 grant execute on function public.owner_save_gift(text, text, text, text, integer, text, text, integer, text, text, text, text) to anon, authenticated;
@@ -1264,6 +1523,9 @@ grant execute on function public.owner_set_contribution_status(text, text, text,
 grant execute on function public.owner_delete_contribution(text, text, text) to anon, authenticated;
 grant execute on function public.owner_reset_contributions(text, text) to anon, authenticated;
 grant execute on function public.create_pending_contribution(text, text, text, text, integer, text, text, text, text, text, text) to anon, authenticated;
+grant execute on function public.create_contribution_reply(text, text, text, text, text) to anon, authenticated;
+grant execute on function public.owner_delete_reply(text, text, text) to anon, authenticated;
+grant execute on function public.report_contribution_reply(text, text) to anon, authenticated;
 grant execute on function public.manage_own_avatar(text, text, text, text, text) to anon, authenticated;
 grant execute on function public.increment_contribution_cheer(text, integer) to anon, authenticated;
 grant execute on function public.owner_set_intro_photo(text, text, text, text) to anon, authenticated;

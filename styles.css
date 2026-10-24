@@ -3597,7 +3597,7 @@ body:not(.is-admin-mode) .admin-only-ui {
   color: var(--text-muted);
 }
 
-/* Remittance Step Box inside Modal */
+/* Remittance Method Selector inside Modal */
 .toss-remit-box {
   background: var(--bg-canvas);
   border: 1.5px solid var(--border-strong);
@@ -3619,17 +3619,29 @@ body:not(.is-admin-mode) .admin-only-ui {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.86rem;
+  font-size: 0.88rem;
   color: var(--text-primary);
+  flex-wrap: wrap;
 }
 
-.toss-step-badge {
+.remit-step-number-badge {
   background: var(--pink-deep);
   color: #FFFFFF;
-  font-size: 0.68rem;
+  font-size: 0.74rem;
   font-weight: 800;
-  padding: 3px 8px;
-  border-radius: var(--radius-pill);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.remit-recipient-tag {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-left: 4px;
 }
 
 .recipient-highlight {
@@ -3666,12 +3678,108 @@ body:not(.is-admin-mode) .admin-only-ui {
   font-size: 0.82rem;
   color: var(--text-secondary);
   line-height: 1.5;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+/* Method Selector Radios Grid */
+.remit-method-radios {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.remit-method-option {
+  cursor: pointer;
+  display: block;
+  user-select: none;
+}
+
+.remit-method-radio {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.remit-method-card {
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 11px 8px;
+  background: var(--bg-surface);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.18s ease;
+  min-height: 74px;
+  justify-content: center;
+}
+
+.remit-method-icon {
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.remit-method-text strong {
+  display: block;
+  font-size: 0.84rem;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.remit-method-text span {
+  display: block;
+  font-size: 0.71rem;
+  color: var(--text-secondary);
+}
+
+.remit-method-card:hover {
+  border-color: var(--pink-main);
+  background: var(--bg-canvas);
+}
+
+.remit-method-radio:checked + .remit-method-card {
+  border-color: var(--pink-deep);
+  background: #FFFDFD;
+  box-shadow: 0 0 0 2px rgba(216, 112, 147, 0.25);
+}
+
+.remit-method-radio:checked + .remit-method-card.kakao-card {
+  border-color: #E5BE00;
+  background: #FFFCF0;
+  box-shadow: 0 0 0 2px rgba(247, 227, 103, 0.45);
+}
+
+.remit-method-radio:checked + .remit-method-card.toss-card {
+  border-color: #3182F6;
+  background: #F4F8FF;
+  box-shadow: 0 0 0 2px rgba(49, 130, 246, 0.35);
+}
+
+.remit-method-radio:checked + .remit-method-card.bank-card {
+  border-color: var(--pink-deep);
+  background: #FFF8F9;
+  box-shadow: 0 0 0 2px rgba(216, 112, 147, 0.3);
+}
+
+.selected-method-preview-box {
+  margin-top: 10px;
+}
+
+.remit-method-guide-banner {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xs);
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
 }
 
 .bank-account-card {
   background: var(--bg-surface);
-  border: 1px solid var(--border-strong);
+  border: 1.5px solid var(--border-strong);
   border-radius: var(--radius-sm);
   padding: 11px 12px;
   display: flex;
@@ -3726,46 +3834,47 @@ body:not(.is-admin-mode) .admin-only-ui {
 .btn-kakao-open {
   width: 100%;
   min-height: 44px;
-  padding: 11px 16px;
+  padding: 12px 16px;
   border-radius: var(--radius-sm);
   background: #F7E367;
   color: #3C2E2E;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 800;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-kakao-open:hover {
+  background: #E8D355;
+  color: #222222;
 }
 
 .btn-toss-open {
   width: 100%;
   min-height: 44px;
-  padding: 11px 16px;
+  padding: 12px 16px;
   border-radius: var(--radius-sm);
   background: var(--pink-main);
   color: #FFFFFF;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 800;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
 }
 
 .btn-toss-open:hover {
   background: var(--pink-deep);
-}
-
-.toss-opened-feedback {
-  margin-top: 8px;
-  padding: 8px 11px;
-  border-radius: var(--radius-xs);
-  background: var(--bg-well);
-  border: 1px solid var(--pink-dusty);
-  color: var(--pink-deep);
-  font-size: 0.78rem;
-  font-weight: 600;
+  color: #FFFFFF;
 }
 
 .toss-link-missing-box {
@@ -3786,6 +3895,26 @@ body:not(.is-admin-mode) .admin-only-ui {
   font-size: 0.78rem;
   color: var(--text-secondary);
   margin-bottom: 10px;
+}
+
+/* Streamlined Submit Notice */
+.pledge-streamlined-notice {
+  background: #FFF7F8;
+  border: 1px solid var(--pink-dusty);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  color: var(--pink-deep);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.45;
+}
+
+.pledge-streamlined-notice .notice-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  margin-top: -1px;
 }
 
 /* Modal Footer */
@@ -3815,28 +3944,6 @@ body:not(.is-admin-mode) .admin-only-ui {
   gap: 10px;
 }
 
-.pledge-footer-notice {
-  background: var(--bg-well);
-  border-radius: var(--radius-sm);
-  padding: 9px 12px;
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  line-height: 1.42;
-}
-
-.step2-badge {
-  background: var(--text-primary);
-  color: #FFFFFF;
-  font-size: 0.66rem;
-  font-weight: 800;
-  padding: 3px 7px;
-  border-radius: var(--radius-pill);
-  flex-shrink: 0;
-}
-
 .pledge-footer-buttons {
   display: flex;
   align-items: center;
@@ -3862,6 +3969,142 @@ body:not(.is-admin-mode) .admin-only-ui {
     width: 100%;
     text-align: center;
   }
+}
+
+/* Remittance Action Box in Receipt View */
+.receipt-remit-action-box {
+  background: var(--bg-canvas);
+  border: 2px solid var(--pink-main);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 18px;
+  text-align: center;
+}
+
+.receipt-action-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.receipt-action-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.remit-action-hero-btn {
+  display: flex !important;
+  width: 100%;
+  font-size: 1.05rem !important;
+  font-weight: 800;
+  padding: 14px 18px !important;
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.remit-app-help-text {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+
+/* Bank Highlight Card in Receipt */
+.receipt-bank-highlight-card {
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  text-align: center;
+}
+
+.rb-badge {
+  display: inline-block;
+  background: var(--bg-well);
+  color: var(--pink-deep);
+  font-size: 0.76rem;
+  font-weight: 800;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  margin-bottom: 8px;
+}
+
+.rb-account-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.rb-holder-row {
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.rb-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-copy-bank-large {
+  font-size: 0.88rem !important;
+  padding: 9px 16px !important;
+  font-weight: 800;
+}
+
+.btn-copy-amount-large {
+  font-size: 0.88rem !important;
+  padding: 9px 16px !important;
+  font-weight: 700;
+}
+
+.receipt-alt-bank-box {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-hairline);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Admin deposit reject button in guestbook */
+.admin-deposit-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.btn-reject-deposit {
+  background: #FFFFFF;
+  border: 1px solid #E57373;
+  color: var(--accent-danger);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
+  transition: all 0.15s ease;
+}
+
+.btn-reject-deposit:hover {
+  background: #FEEBEE;
 }
 
 /* Receipt View */

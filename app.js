@@ -310,7 +310,7 @@
         birthdayDate: getTodayDateString(),
         headline: cfg.defaultHeadline(cleanName),
         subtitle: cfg.defaultSubtitle,
-        bio: `${cleanName}님이 받고 싶은 위시리스트에 원하는 금액만큼 마음을 보태주세요. 송금 후 「송금했어요」를 눌러주시면 입금 확인을 거쳐 달성률에 반영됩니다.`,
+        bio: `${cleanName}님이 받고 싶은 위시리스트에 원하는 금액만큼 마음을 보태주세요. 응원 메시지와 함께 송금하시면 입금 확인을 거쳐 달성률에 반영됩니다.`,
         kakaoRemitUrl: '',
         tossRemitUrl: '',
         bankName: '',
@@ -348,10 +348,12 @@
   let realtimeChannel = null;
   let pollIntervalId = null;
   let isCloudConnected = false;
+  let isCurrentCampaignCloud = false;
   let lastSupabaseSyncError = '';
   let isAdminAuthenticated = false; // True only when verified as the owner of currentCampaignId
   let isSubmittingPledge = false;
   let lastSubmitTimestamp = 0;
+  let currentSelectedRemitMethod = 'bank';
 
   // Temporary Photo State inside Gift Editor Modal
   let editorPhotoDataUrl = '';
@@ -852,6 +854,7 @@
     }
     currentCampaignId = '';
     isAdminAuthenticated = false;
+    isCurrentCampaignCloud = false;
     try {
       const nextUrl = new URL(window.location.href);
       nextUrl.searchParams.delete('f');
@@ -869,6 +872,7 @@
 
     if (!currentCampaignId) {
       isAdminAuthenticated = false;
+      isCurrentCampaignCloud = false;
       finishBirthdayIntro();
       updateViewModeUI();
       checkFirstVisitGuideOnLoad();
@@ -880,6 +884,7 @@
     if (isCloudConnected && supabaseClient) {
       loadedOk = await fetchCampaignFromSupabase(currentCampaignId, false);
       if (loadedOk) {
+        isCurrentCampaignCloud = true;
         await verifyCurrentCampaignOwnerSession();
         setupRealtimeForCurrentCampaign(currentCampaignId);
       } else {
@@ -984,6 +989,7 @@
     const record = db.campaigns[campaignId];
     if (!record || !record.campaign) return false;
 
+    isCurrentCampaignCloud = false;
     state = {
       campaign: { ...record.campaign, id: campaignId },
       gifts: Array.isArray(record.gifts) ? record.gifts : [],
@@ -1324,7 +1330,7 @@
 
     const headline = customHeadline || eventCfg.defaultHeadline(hostName);
     const subtitle = eventCfg.defaultSubtitle;
-    const bio = `${hostName}님이 받고 싶은 위시리스트에 원하는 금액만큼 마음을 보태주세요. 송금 후 「송금했어요」를 눌러주시면 입금 확인을 거쳐 달성률에 반영됩니다.`;
+    const bio = `${hostName}님이 받고 싶은 위시리스트에 원하는 금액만큼 마음을 보태주세요. 응원 메시지와 함께 송금하시면 입금 확인을 거쳐 달성률에 반영됩니다.`;
 
     submitBtn.disabled = true;
     submitBtn.textContent = '⏳ 나만의 펀딩 생성 중...';
@@ -1435,7 +1441,7 @@
       if (fileOrBlobToUpload) {
         try {
           submitBtn.textContent = '🖼️ 인트로 사진 업로드 중...';
-          if (isCloudConnected && supabaseClient) {
+          if (isCloudConnected && supabaseClient && isCurrentCampaignCloud) {
             const objectPath = await uploadIntroPhotoToStorage(fileOrBlobToUpload, issuedCampaignId);
             const { data: photoData, error: photoError } = await supabaseClient.rpc('owner_set_intro_photo', {
               p_campaign_id: issuedCampaignId,
@@ -2162,11 +2168,16 @@
       `선물과 금액, 프로필 사진 및 축하 메시지를 입력한 뒤 ${hostName}님에게 송금해 주세요.`;
     document.getElementById('pledgeRelationLabel').textContent = `${hostName}${withParticle} 관계`;
     document.getElementById('pledgeMessageInput').placeholder = cfg.pledgePlaceholder(hostName);
-    document.getElementById('remitRecipientName').textContent = hostName;
-    document.getElementById('guideRecipientName').textContent = hostName;
-    document.getElementById('bankHolderDisplay').textContent = hostName;
-    document.getElementById('openKakaoLinkBtnText').textContent = `💛 카카오페이로 ${hostName}님에게 송금하기`;
-    document.getElementById('openTossLinkBtnText').textContent = `💙 토스로 ${hostName}님에게 송금하기`;
+    const remitRecipientNameEl = document.getElementById('remitRecipientName');
+    if (remitRecipientNameEl) remitRecipientNameEl.textContent = hostName;
+    const guideRecipientNameEl = document.getElementById('guideRecipientName');
+    if (guideRecipientNameEl) guideRecipientNameEl.textContent = hostName;
+    const bankHolderDisplayEl = document.getElementById('bankHolderDisplay');
+    if (bankHolderDisplayEl) bankHolderDisplayEl.textContent = hostName;
+    const openKakaoLinkBtnTextEl = document.getElementById('openKakaoLinkBtnText');
+    if (openKakaoLinkBtnTextEl) openKakaoLinkBtnTextEl.textContent = `💛 카카오페이로 ${hostName}님에게 송금하기`;
+    const openTossLinkBtnTextEl = document.getElementById('openTossLinkBtnText');
+    if (openTossLinkBtnTextEl) openTossLinkBtnTextEl.textContent = `💙 토스로 ${hostName}님에게 송금하기`;
 
     // Update Pledge Modal Purpose Clarification Banner
     const pledgePurposeTag = document.getElementById('pledgePurposeTag');
@@ -2624,10 +2635,13 @@
         } else {
           depositStatusRowHtml = `
             <div class="deposit-status-row pending">
-              <span>⏳ 입금 확인 대기 (펀딩 주인 승인 후 반영)</span>
+              <span>⏳ 입금 확인 대기 (펀딩 주인 확인 후 달성률 반영)</span>
               ${
                 isAdminAuthenticated
-                  ? `<button type="button" class="btn-approve-deposit" data-action="approve-pledge" data-pledge-id="${escapeHtml(item.id)}">✅ 입금 확인 승인</button>`
+                  ? `<div class="admin-deposit-actions">
+                      <button type="button" class="btn-approve-deposit" data-action="approve-pledge" data-pledge-id="${escapeHtml(item.id)}" title="실제 입금을 확인하여 달성률에 반영합니다">✅ 입금 확인 승인</button>
+                      <button type="button" class="btn-reject-deposit" data-action="delete-pledge" data-pledge-id="${escapeHtml(item.id)}" title="미입금 또는 잘못된 신청을 삭제합니다">❌ 미입금 삭제/거절</button>
+                    </div>`
                   : ''
               }
             </div>
@@ -2853,12 +2867,10 @@
     const receiptView = document.getElementById('pledgeReceiptView');
     const giftSelect = document.getElementById('pledgeGiftSelect');
     const errorEl = document.getElementById('pledgeErrorMsg');
-    const openedFeedback = document.getElementById('tossOpenedFeedback');
 
     formView.hidden = false;
     receiptView.hidden = true;
     errorEl.hidden = true;
-    openedFeedback.hidden = true;
 
     resetPledgeAvatarState();
     document.getElementById('pledgeSelfPinInput').value = '';
@@ -2898,10 +2910,11 @@
 
     const configuredArea = document.getElementById('remitConfiguredArea');
     const missingArea = document.getElementById('tossLinkMissingArea');
-    const bankCard = document.getElementById('bankAccountDisplayCard');
-    const kakaoBtn = document.getElementById('openKakaoLinkBtn');
-    const tossBtn = document.getElementById('openTossLinkBtn');
     const registerBtn = document.getElementById('goRegisterTossLinkBtn');
+
+    const optKakao = document.getElementById('optRemitKakaoLabel');
+    const optToss = document.getElementById('optRemitTossLabel');
+    const optBank = document.getElementById('optRemitBankLabel');
 
     if (registerBtn) {
       registerBtn.hidden = !isAdminAuthenticated;
@@ -2911,19 +2924,203 @@
       configuredArea.hidden = false;
       missingArea.hidden = true;
 
-      if (hasBank) {
-        bankCard.hidden = false;
-        const fullBankLabel = bankName ? `${bankName} ${bankAccount}` : bankAccount;
-        document.getElementById('bankAccountTextDisplay').textContent = fullBankLabel;
-      } else {
-        bankCard.hidden = true;
+      if (optKakao) optKakao.hidden = !validKakaoUrl;
+      if (optToss) optToss.hidden = !validTossUrl;
+      if (optBank) {
+        optBank.hidden = !hasBank;
+        const bankSub = document.getElementById('optRemitBankSubtitle');
+        if (bankSub && hasBank) {
+          bankSub.textContent = bankName ? `${bankName} 계좌이체` : '은행 계좌번호 복사';
+        }
       }
 
-      kakaoBtn.hidden = !validKakaoUrl;
-      tossBtn.hidden = !validTossUrl;
+      // Check available options
+      const availableMethods = [];
+      if (validKakaoUrl) availableMethods.push('kakao');
+      if (validTossUrl) availableMethods.push('toss');
+      if (hasBank) availableMethods.push('bank');
+
+      if (!availableMethods.includes(currentSelectedRemitMethod)) {
+        currentSelectedRemitMethod = availableMethods[0] || 'bank';
+      }
+
+      const radio = document.querySelector(`input[name="selectedRemitMethod"][value="${currentSelectedRemitMethod}"]`);
+      if (radio) radio.checked = true;
+
+      updateSelectedRemitMethodPreview();
     } else {
       configuredArea.hidden = true;
       missingArea.hidden = false;
+      const previewBox = document.getElementById('selectedMethodPreviewBox');
+      if (previewBox) previewBox.innerHTML = '';
+      const btnText = document.getElementById('submitPledgeBtnText');
+      if (btnText) btnText.textContent = '💌 응원 메시지 남기기';
+    }
+  }
+
+  function updateSelectedRemitMethodPreview() {
+    const { campaign } = state;
+    const previewBox = document.getElementById('selectedMethodPreviewBox');
+    if (!previewBox) return;
+
+    const bankAccount = (campaign.bankAccount || '').trim();
+    const bankName = (campaign.bankName || '').trim();
+    const cleanAmount = Math.max(0, Math.round(Number(document.getElementById('pledgeAmountInput')?.value) || 0));
+    const btnTextEl = document.getElementById('submitPledgeBtnText');
+
+    let previewHtml = '';
+    let submitLabel = '💌 응원 메시지 남기고 송금하기';
+
+    if (currentSelectedRemitMethod === 'kakao') {
+      submitLabel = `💛 카카오페이로 ${cleanAmount > 0 ? formatKRW(cleanAmount) + ' ' : ''}송금하기`;
+      previewHtml = `
+        <div class="remit-method-guide-banner">
+          💛 <strong>카카오페이 송금:</strong> 아래 버튼을 누르면 <strong>응원 메시지가 먼저 안전하게 저장</strong>된 후 카카오페이 송금 앱(화면)으로 바로 연결됩니다.
+        </div>
+      `;
+    } else if (currentSelectedRemitMethod === 'toss') {
+      submitLabel = `💙 토스로 ${cleanAmount > 0 ? formatKRW(cleanAmount) + ' ' : ''}송금하기`;
+      previewHtml = `
+        <div class="remit-method-guide-banner">
+          💙 <strong>토스 송금:</strong> 아래 버튼을 누르면 <strong>응원 메시지가 먼저 안전하게 저장</strong>된 후 토스 송금 앱(화면)으로 바로 연결됩니다.
+        </div>
+      `;
+    } else if (currentSelectedRemitMethod === 'bank') {
+      submitLabel = `🏦 계좌 확인하고 ${cleanAmount > 0 ? formatKRW(cleanAmount) + ' ' : ''}송금하기`;
+      const fullBankLabel = bankName ? `${bankName} ${bankAccount}` : bankAccount;
+      previewHtml = `
+        <div class="bank-account-card">
+          <div class="bank-account-info">
+            <span class="bank-badge">계좌송금</span>
+            <div class="bank-text-wrap">
+              <strong>${escapeHtml(fullBankLabel)}</strong>
+              <span class="bank-holder-text">예금주: <strong>${escapeHtml(campaign.hostName || '주인공')}</strong></span>
+            </div>
+          </div>
+          <button type="button" class="btn-copy-bank" id="copyBankPreviewBtn" data-bank-text="${escapeHtml(fullBankLabel)}">
+            📋 계좌 복사
+          </button>
+        </div>
+        <div class="remit-method-guide-banner" style="margin-top: 6px;">
+          🏦 <strong>계좌이체:</strong> 아래 버튼을 누르면 <strong>응원 메시지가 먼저 등록</strong>되고, 바로 송금하실 수 있도록 계좌번호와 금액 복사 화면이 크게 안내됩니다.
+        </div>
+      `;
+    }
+
+    previewBox.innerHTML = previewHtml;
+    if (btnTextEl && !isSubmittingPledge) {
+      btnTextEl.textContent = submitLabel;
+    }
+
+    const copyBtn = document.getElementById('copyBankPreviewBtn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleCopyBankAccount();
+      });
+    }
+  }
+
+  function renderReceiptRemitAction(method, amount) {
+    const box = document.getElementById('receiptRemitActionBox');
+    if (!box) return;
+
+    const { campaign } = state;
+    const validKakaoUrl = getValidHttpUrl(campaign.kakaoRemitUrl);
+    const validTossUrl = getValidHttpUrl(campaign.tossRemitUrl);
+    const bankAccount = (campaign.bankAccount || '').trim();
+    const bankName = (campaign.bankName || '').trim();
+    const hasBank = bankAccount.length > 0;
+    const fullBankLabel = bankName ? `${bankName} ${bankAccount}` : bankAccount;
+    const cleanAmountStr = formatKRW(amount);
+
+    let html = '';
+
+    if (method === 'kakao' && validKakaoUrl) {
+      html = `
+        <div class="receipt-action-title">💛 카카오페이로 ${cleanAmountStr} 송금하기</div>
+        <p class="receipt-action-desc">
+          아래 노란색 버튼을 눌러 카카오페이 앱(또는 모바일 웹)에서 <strong>${escapeHtml(campaign.hostName)}</strong>님에게 송금해 주세요.
+        </p>
+        <a href="${escapeHtml(validKakaoUrl)}" target="_blank" rel="noopener noreferrer" class="btn-kakao-open remit-action-hero-btn" id="receiptKakaoOpenBtn">
+          💛 카카오페이 송금 앱 열기
+        </a>
+        <p class="remit-app-help-text">💡 송금 앱이 자동으로 열리지 않았다면 위 노란색 버튼을 한 번 더 눌러주세요.</p>
+        ${
+          hasBank
+            ? `<div class="receipt-alt-bank-box">
+                <span>또는 계좌번호로 직접 송금: <strong>${escapeHtml(fullBankLabel)} (예금주: ${escapeHtml(campaign.hostName)})</strong></span>
+                <button type="button" class="btn-copy-bank btn-xs" id="receiptAltCopyBankBtn">📋 계좌 복사</button>
+              </div>`
+            : ''
+        }
+      `;
+    } else if (method === 'toss' && validTossUrl) {
+      html = `
+        <div class="receipt-action-title">💙 토스(Toss)로 ${cleanAmountStr} 송금하기</div>
+        <p class="receipt-action-desc">
+          아래 파란색 버튼을 눌러 토스 앱에서 <strong>${escapeHtml(campaign.hostName)}</strong>님에게 송금해 주세요.
+        </p>
+        <a href="${escapeHtml(validTossUrl)}" target="_blank" rel="noopener noreferrer" class="btn-toss-open remit-action-hero-btn" id="receiptTossOpenBtn">
+          💙 토스 송금 앱 열기
+        </a>
+        <p class="remit-app-help-text">💡 송금 앱이 자동으로 열리지 않았다면 위 파란색 버튼을 한 번 더 눌러주세요.</p>
+        ${
+          hasBank
+            ? `<div class="receipt-alt-bank-box">
+                <span>또는 계좌번호로 직접 송금: <strong>${escapeHtml(fullBankLabel)} (예금주: ${escapeHtml(campaign.hostName)})</strong></span>
+                <button type="button" class="btn-copy-bank btn-xs" id="receiptAltCopyBankBtn">📋 계좌 복사</button>
+              </div>`
+            : ''
+        }
+      `;
+    } else {
+      // Bank transfer
+      html = `
+        <div class="receipt-bank-highlight-card">
+          <span class="rb-badge">🏦 계좌이체 (무통장입금) 안내</span>
+          <div class="rb-account-row">
+            <span style="font-size: 0.95rem; color: var(--text-secondary);">${escapeHtml(bankName || '입금계좌')}:</span>
+            <strong style="color: var(--pink-deep); font-size: 1.25rem; letter-spacing: 0.5px;">${escapeHtml(bankAccount || '계좌 미등록')}</strong>
+          </div>
+          <div class="rb-holder-row">
+            예금주: <strong>${escapeHtml(campaign.hostName || '주인공')}</strong> &nbsp;·&nbsp; 보내실 금액: <strong style="color: var(--pink-deep);">${cleanAmountStr}</strong>
+          </div>
+          <div class="rb-actions-row">
+            <button type="button" class="btn-primary btn-copy-bank-large" id="receiptCopyBankMainBtn">
+              📋 계좌번호 복사하기
+            </button>
+            <button type="button" class="btn-secondary btn-copy-amount-large" id="receiptCopyAmountMainBtn">
+              📋 금액(${formatNumberKo(amount)}원) 복사
+            </button>
+          </div>
+          <p class="remit-app-help-text" style="margin-top: 10px;">
+            💡 은행 앱(카카오뱅크, 국민, 신한, 토스 등)에서 복사한 계좌번호로 송금해 주시면 펀딩 주인이 확인 후 승인합니다.
+          </p>
+        </div>
+      `;
+    }
+
+    box.innerHTML = html;
+
+    const altCopy = document.getElementById('receiptAltCopyBankBtn');
+    if (altCopy) {
+      altCopy.addEventListener('click', () => handleCopyBankAccount());
+    }
+    const mainCopy = document.getElementById('receiptCopyBankMainBtn');
+    if (mainCopy) {
+      mainCopy.addEventListener('click', () => handleCopyBankAccount());
+    }
+    const amountCopy = document.getElementById('receiptCopyAmountMainBtn');
+    if (amountCopy) {
+      amountCopy.addEventListener('click', () => {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(String(amount)).then(() => {
+            showToast(`금액(${formatNumberKo(amount)}원)이 복사되었습니다.`);
+          });
+        }
+      });
     }
   }
 
@@ -2983,7 +3180,6 @@
     const input = document.getElementById('pledgeAmountInput');
     const slider = document.getElementById('pledgeAmountSlider');
     const formatted = document.getElementById('pledgeAmountFormatted');
-    const btnText = document.getElementById('submitPledgeBtnText');
     const guideAmount = document.getElementById('guideSelectedAmount');
     const copyAmountText = document.getElementById('copyAmountBtnText');
 
@@ -2993,9 +3189,8 @@
     input.value = clean;
     slider.value = String(clean);
     formatted.textContent = formatNumberKo(clean);
-    guideAmount.textContent = formatNumberKo(clean);
-    copyAmountText.textContent = `${formatNumberKo(clean)} 복사`;
-    btnText.textContent = `💸 ${formatKRW(clean)} 송금했어요`;
+    if (guideAmount) guideAmount.textContent = formatNumberKo(clean);
+    if (copyAmountText) copyAmountText.textContent = `${formatNumberKo(clean)} 복사`;
 
     const giftId = document.getElementById('pledgeGiftSelect').value;
     const gift = state.gifts.find((g) => g.id === giftId);
@@ -3004,6 +3199,8 @@
       const boostPercent = Math.max(0, Math.round((clean / goal) * 100));
       document.getElementById('pledgeImpactBadge').textContent = `승인 시 달성률 +${boostPercent}%`;
     }
+
+    updateSelectedRemitMethodPreview();
   }
 
   function handleOpenRemitUrl(type) {
@@ -3026,23 +3223,22 @@
     }
 
     window.open(validUrl, '_blank', 'noopener,noreferrer');
-
-    const openedFeedback = document.getElementById('tossOpenedFeedback');
-    openedFeedback.hidden = false;
     showToast(`${label} 송금 창을 열었습니다. 받는 분(${state.campaign.hostName})과 금액(${formatNumberKo(amount)})을 확인 후 송금해 주세요.`);
   }
 
   function handleCopyBankAccount() {
     const bankName = (state.campaign.bankName || '').trim();
     const bankAccount = (state.campaign.bankAccount || '').trim();
-    if (!bankAccount) return;
+    if (!bankAccount) {
+      showToast('등록된 계좌번호가 없습니다.');
+      return;
+    }
 
     const copyStr = bankName ? `${bankName} ${bankAccount}` : bankAccount;
-    document.getElementById('tossOpenedFeedback').hidden = false;
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(copyStr).then(() => {
-        showToast(`계좌번호(${copyStr})가 복사되었습니다!`);
+        showToast(`✅ 계좌번호(${copyStr})가 복사되었습니다!`);
       }).catch(() => {
         showToast(`계좌번호: ${copyStr} (예금주: ${state.campaign.hostName})`);
       });
@@ -3071,6 +3267,7 @@
     const hasSelectedPhoto = Boolean(pledgeAvatarDataUrl && pledgeAvatarDataUrl.length > 0);
     const consentChecked = document.getElementById('pledgePhotoConsentCheck').checked;
     const submitBtn = document.getElementById('submitSentBtn');
+    const submitBtnText = document.getElementById('submitPledgeBtnText');
 
     errorEl.hidden = true;
 
@@ -3110,9 +3307,21 @@
       return;
     }
     if (!message) {
-      errorEl.textContent = `${state.campaign.hostName}님에게 전할 축하 메시지를 입력해주세요.`;
+      errorEl.textContent = `${state.campaign.hostName}님에게 전할 응원 메시지를 입력해주세요.`;
       errorEl.hidden = false;
       document.getElementById('pledgeMessageInput').focus();
+      return;
+    }
+
+    // Verify chosen remittance method
+    const chosenMethod = currentSelectedRemitMethod || 'bank';
+    const validKakao = getValidHttpUrl(state.campaign.kakaoRemitUrl);
+    const validToss = getValidHttpUrl(state.campaign.tossRemitUrl);
+    const hasBank = Boolean((state.campaign.bankAccount || '').trim());
+
+    if (!validKakao && !validToss && !hasBank) {
+      errorEl.textContent = '펀딩 주인에게 아직 등록된 송금 계좌나 링크가 없습니다. 펀딩 주인에게 문의해 주세요.';
+      errorEl.hidden = false;
       return;
     }
 
@@ -3123,7 +3332,7 @@
 
     try {
       if (hasSelectedPhoto && pledgeAvatarBlob && isSupabaseConfigured() && isCloudConnected) {
-        document.getElementById('submitPledgeBtnText').textContent = '☁️ 프로필 사진 업로드 중...';
+        if (submitBtnText) submitBtnText.textContent = '☁️ 프로필 사진 업로드 중...';
         finalAvatarUrl = await uploadToSupabaseStorage(pledgeAvatarBlob, pledgeAvatarMime, 'avatars');
       }
 
@@ -3134,8 +3343,9 @@
       const now = new Date();
       const dateStamp = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-      if (isCloudConnected && supabaseClient) {
-        document.getElementById('submitPledgeBtnText').textContent = '☁️ 펀딩 참여 내역 등록 중...';
+      // 1. Save cheer message and pending contribution FIRST!
+      if (isCloudConnected && supabaseClient && isCurrentCampaignCloud) {
+        if (submitBtnText) submitBtnText.textContent = '☁️ 응원 메시지 및 신청 등록 중...';
 
         const { data: contribRes, error: rpcErr } = await supabaseClient.rpc('create_pending_contribution', {
           p_campaign_id: currentCampaignId,
@@ -3160,6 +3370,7 @@
 
         await fetchCampaignFromSupabase(currentCampaignId, true);
       } else {
+        // Virtual/Local preview fallback mode
         const newPledgeId = 'pledge-' + Date.now() + '-' + generateRandomHex(4);
         const pinSalt = selfPin.length >= 4 ? generateRandomHex(6) : '';
         const pinHash = selfPin.length >= 4 ? computeLocalHash(selfPin, pinSalt) : '';
@@ -3188,31 +3399,59 @@
       lastSubmitTimestamp = Date.now();
       lastPledgedGift = targetGift;
 
+      // 2. Set up the Receipt & Remittance Action View
       document.getElementById('receiptAvatarWrap').innerHTML = renderAvatarMediaHtml(finalAvatarUrl, senderName);
       document.getElementById('receiptSender').textContent = `${senderName} (${relation})`;
       const evGiftWord = (state.campaign.eventType === 'birthday') ? '생일 선물' : '선물';
       document.getElementById('receiptGiftName').textContent = targetGift ? targetGift.title : `${state.campaign.hostName}님의 ${evGiftWord}`;
       document.getElementById('receiptAmount').textContent = formatKRW(amount);
       document.getElementById('receiptProgressJump').textContent =
-        `현재 ${currentMetrics.rawPercent}% 유지 (펀딩 주인 승인 시 ${expectedAfterApprovePercent}% 반영)`;
+        `현재 ${currentMetrics.rawPercent}% 유지 (펀딩 주인 입금 확인 후 ${expectedAfterApprovePercent}% 반영)`;
       document.getElementById('receiptMessagePreview').textContent = `"${message}"`;
 
+      // Render the method-specific Remittance Action Card in receipt view
+      renderReceiptRemitAction(chosenMethod, amount);
+
+      // Switch to the receipt view immediately
       document.getElementById('pledgeFormView').hidden = true;
       document.getElementById('pledgeReceiptView').hidden = false;
 
+      // Clear input fields
       document.getElementById('pledgeSenderName').value = '';
       document.getElementById('pledgeMessageInput').value = '';
       document.getElementById('pledgeSelfPinInput').value = '';
       document.getElementById('msgCharCount').textContent = '0';
       resetPledgeAvatarState();
 
-      showToast('「입금 확인 대기」 상태로 접수되었습니다.');
+      showToast('💌 응원 메시지가 등록되었습니다! 송금을 완료해 주세요.');
 
-      // 후원 신청 정상 등록 시 토끼 축하 애니메이션 + 팡파르 실행
+      // Play bunny celebration animation & sound
       playBunnyCelebration(targetGift);
+
+      // 3. Automated App Launch for Kakao / Toss (Mobile & Desktop friendly)
+      let targetRemitUrl = '';
+      if (chosenMethod === 'kakao') {
+        targetRemitUrl = validKakao;
+      } else if (chosenMethod === 'toss') {
+        targetRemitUrl = validToss;
+      }
+
+      if (targetRemitUrl) {
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        try {
+          if (isMobile) {
+            window.location.href = targetRemitUrl;
+          } else {
+            window.open(targetRemitUrl, '_blank', 'noopener,noreferrer');
+          }
+        } catch (openErr) {
+          console.warn('[Remit] Automatic redirect was blocked by browser:', openErr);
+        }
+      }
     } catch (err) {
-      errorEl.textContent = err.message || '펀딩 참여 처리 중 오류가 발생했습니다.';
+      errorEl.textContent = `후원 신청 저장 오류: ${err.message || '처리 중 오류가 발생했습니다'}. 다시 시도해 주세요.`;
       errorEl.hidden = false;
+      if (submitBtnText) submitBtnText.textContent = '🔄 다시 시도하기';
     } finally {
       isSubmittingPledge = false;
       submitBtn.disabled = false;
@@ -5793,7 +6032,7 @@
       } else if (action === 'delete-gift') {
         if (!requireAdminPermission('위시리스트 선물 삭제')) return;
         if (window.confirm('이 선물을 위시리스트에서 삭제할까요?')) {
-          if (isCloudConnected && supabaseClient) {
+          if (isCloudConnected && supabaseClient && isCurrentCampaignCloud) {
             const token = getStoredOwnerSessionToken(currentCampaignId);
             const { error } = await supabaseClient.rpc('owner_delete_gift', {
               p_campaign_id: currentCampaignId,
@@ -5892,7 +6131,7 @@
         if (!replyId) return;
         if (!requireAdminPermission('답글 삭제')) return;
         if (window.confirm('이 답글을 삭제할까요?')) {
-          if (isCloudConnected && supabaseClient) {
+          if (isCloudConnected && supabaseClient && isCurrentCampaignCloud) {
             const token = getStoredOwnerSessionToken(currentCampaignId);
             const { error } = await supabaseClient.rpc('owner_delete_reply', {
               p_campaign_id: currentCampaignId,
@@ -5917,7 +6156,7 @@
       if (action === 'report-reply') {
         const replyId = btn.getAttribute('data-reply-id');
         if (!replyId) return;
-        if (isCloudConnected && supabaseClient) {
+        if (isCloudConnected && supabaseClient && isCurrentCampaignCloud) {
           await supabaseClient.rpc('report_contribution_reply', {
             p_campaign_id: currentCampaignId,
             p_reply_id: replyId
@@ -5935,7 +6174,7 @@
         const targetGiftBefore = state.gifts.find((g) => String(g.id || '').trim() === String(target.giftId || '').trim());
         const wasCompletedBefore = targetGiftBefore ? getGiftMetrics(targetGiftBefore).isCompleted : false;
 
-        if (isCloudConnected && supabaseClient) {
+        if (isCloudConnected && supabaseClient && isCurrentCampaignCloud) {
           const token = getStoredOwnerSessionToken(currentCampaignId);
           const { error } = await supabaseClient.rpc('owner_set_contribution_status', {
             p_campaign_id: currentCampaignId,
@@ -5961,7 +6200,7 @@
         showToast(`✅ ${target.senderName}님의 입금(${formatKRW(target.amount)})이 승인되어 달성률에 반영되었습니다!`);
       } else if (action === 'unapprove-pledge') {
         if (!requireAdminPermission('입금 승인 취소')) return;
-        if (isCloudConnected && supabaseClient) {
+        if (isCloudConnected && supabaseClient && isCurrentCampaignCloud) {
           const token = getStoredOwnerSessionToken(currentCampaignId);
           const { error } = await supabaseClient.rpc('owner_set_contribution_status', {
             p_campaign_id: currentCampaignId,
@@ -5998,7 +6237,7 @@
         saveCheeredIds();
         renderGuestbookSection();
 
-        if (isCloudConnected && supabaseClient) {
+        if (isCloudConnected && supabaseClient && isCurrentCampaignCloud) {
           await supabaseClient.rpc('increment_contribution_cheer', {
             p_contribution_id: pledgeId,
             p_delta: delta
@@ -6009,8 +6248,8 @@
         }
       } else if (action === 'delete-pledge') {
         if (!requireAdminPermission('참여 내역 삭제')) return;
-        if (window.confirm('이 펀딩 참여 내역을 삭제할까요?')) {
-          if (isCloudConnected && supabaseClient) {
+        if (window.confirm('입금이 확인되지 않았거나 취소된 후원 신청을 삭제하시겠습니까?\n삭제하시면 방명록과 펀딩 목록에서 완전히 제거됩니다.')) {
+          if (isCloudConnected && supabaseClient && isCurrentCampaignCloud) {
             const token = getStoredOwnerSessionToken(currentCampaignId);
             const { error } = await supabaseClient.rpc('owner_delete_contribution', {
               p_campaign_id: currentCampaignId,
@@ -6075,7 +6314,7 @@
           submitBtn.textContent = '등록 중...';
         }
 
-        if (isCloudConnected && supabaseClient) {
+        if (isCloudConnected && supabaseClient && isCurrentCampaignCloud) {
           const token = isAdminAuthenticated ? getStoredOwnerSessionToken(currentCampaignId) : '';
           const { data, error } = await supabaseClient.rpc('create_contribution_reply', {
             p_campaign_id: currentCampaignId,
@@ -6227,9 +6466,17 @@
       }
     });
 
-    document.getElementById('openKakaoLinkBtn').addEventListener('click', () => handleOpenRemitUrl('kakao'));
-    document.getElementById('openTossLinkBtn').addEventListener('click', () => handleOpenRemitUrl('toss'));
-    document.getElementById('copyBankAccountBtn').addEventListener('click', handleCopyBankAccount);
+    // Remittance Method Selection Radios
+    document.querySelectorAll('input[name="selectedRemitMethod"]').forEach((radio) => {
+      radio.addEventListener('change', (e) => {
+        currentSelectedRemitMethod = e.target.value;
+        updateSelectedRemitMethodPreview();
+      });
+    });
+
+    document.getElementById('openKakaoLinkBtn')?.addEventListener('click', () => handleOpenRemitUrl('kakao'));
+    document.getElementById('openTossLinkBtn')?.addEventListener('click', () => handleOpenRemitUrl('toss'));
+    document.getElementById('copyBankAccountBtn')?.addEventListener('click', handleCopyBankAccount);
 
     document.getElementById('inlineEditRemitBtn').addEventListener('click', () => {
       closePledgeModal();
@@ -6593,7 +6840,7 @@
         retryDeleteBtn.textContent = '⏳ 파일 삭제 중...';
 
         try {
-          if (isCloudConnected && supabaseClient) {
+          if (isCloudConnected && supabaseClient && isCurrentCampaignCloud) {
             const token = getStoredOwnerSessionToken(currentCampaignId);
             const cfg = resolveSupabaseConnectionConfig();
             const bucketName = (cfg.bucket || DEFAULT_BUCKET_NAME).trim();
