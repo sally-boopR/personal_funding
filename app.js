@@ -836,6 +836,9 @@
             isCloudConnected = true;
           }
           renderCloudStatusPill();
+          if (!currentCampaignId) {
+            refreshCampaignCountUI();
+          }
         })
         .catch(() => {
           isCloudConnected = false;
@@ -1206,6 +1209,7 @@
       document.getElementById('topBrandSub').textContent = '나만의 선물 위시리스트';
       document.getElementById('footerBrandTitle').textContent = 'personal_funding — 특별한 날, 마음을 모으는 선물 펀딩';
       document.getElementById('pendingAlertBanner').hidden = true;
+      refreshCampaignCountUI();
     }
 
     updateAdminModeUI();
@@ -1279,6 +1283,86 @@
         footerNote.textContent =
           '💡 personal_funding — 현재 로컬 미리보기 모드입니다. 다른 기기와 공유하려면 상단 [☁️ 개발용 DB 연결]에서 personal_funding Supabase 프로젝트를 연결해 주세요.';
       }
+    }
+  }
+
+  // =========================================================================
+  // 1.5. PUBLIC CAMPAIGN COUNT STATS (지금까지 만들어진 누적 펀딩 수)
+  // =========================================================================
+  let cachedCampaignCount = null;
+  let isFetchingCampaignCount = false;
+
+  async function fetchCampaignCount() {
+    if (isCloudConnected && supabaseClient) {
+      // 1) 안전한 서버 측 RPC 우선 호출 (숫자 1개만 반환, 상세 정보 원천 차단)
+      try {
+        const { data, error } = await supabaseClient.rpc('get_public_campaign_count');
+        if (!error && typeof data === 'number' && !isNaN(data)) {
+          return data;
+        }
+      } catch (e) {
+        // RPC 미설치 시 PostgREST head 쿼리로 자동 폴백
+      }
+
+      // 2) PostgREST count='exact', head=true (0바이트 응답 헤더로 count만 집계)
+      try {
+        const { count, error } = await supabaseClient
+          .from('campaigns')
+          .select('id', { count: 'exact', head: true });
+        if (!error && typeof count === 'number' && !isNaN(count)) {
+          return count;
+        }
+      } catch (e) {
+        console.warn('[CampaignCount] Supabase count query error:', e);
+      }
+    }
+
+    // 3) 로컬 / 가상 멀티 DB 폴백
+    try {
+      const localDb = loadLocalMultiDb();
+      if (localDb && localDb.campaigns) {
+        const keys = Object.keys(localDb.campaigns);
+        if (keys.length > 0) return keys.length;
+      }
+    } catch (e) {}
+
+    return null;
+  }
+
+  async function refreshCampaignCountUI(forceFresh = false) {
+    const badgeEl = document.getElementById('campaignCountBadge');
+    const numEl = document.getElementById('campaignCountNumber');
+    const hintEl = document.getElementById('createFormCountHint');
+    const hintNumEl = document.getElementById('createFormCountNumber');
+
+    if (!badgeEl && !hintEl) return;
+
+    if (isFetchingCampaignCount && !forceFresh) return;
+
+    try {
+      isFetchingCampaignCount = true;
+      const count = await fetchCampaignCount();
+
+      if (typeof count === 'number' && count > 0) {
+        cachedCampaignCount = count;
+        const formatted = formatNumberKo(count);
+
+        if (numEl) numEl.textContent = formatted;
+        if (badgeEl) badgeEl.hidden = false;
+
+        if (hintNumEl) hintNumEl.textContent = formatted;
+        if (hintEl) hintEl.hidden = false;
+      } else {
+        // 조회 실패 시 가짜 숫자나 오류를 표시하지 않고 자연스럽게 숨김
+        if (badgeEl) badgeEl.hidden = true;
+        if (hintEl) hintEl.hidden = true;
+      }
+    } catch (err) {
+      console.warn('[CampaignCount] refresh error:', err);
+      if (badgeEl) badgeEl.hidden = true;
+      if (hintEl) hintEl.hidden = true;
+    } finally {
+      isFetchingCampaignCount = false;
     }
   }
 
@@ -1549,6 +1633,7 @@
 
       launchConfetti();
       showToast(`🎉 ${eventLabel} 펀딩이 생성되었습니다! 공유 URL과 관리 비밀번호를 꼭 보관해 주세요.`);
+      refreshCampaignCountUI(true);
     } catch (err) {
       errEl.textContent = err.message || '펀딩 생성에 실패했습니다.';
       errEl.hidden = false;

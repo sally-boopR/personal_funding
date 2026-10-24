@@ -4514,9 +4514,74 @@ body:not(.is-admin-mode) .admin-only-ui {
 }
 
 @media (min-width: 960px) {
-  .create-hero-quick-actions {
+  .create-hero-quick-actions .create-quick-cta-btn {
     display: none;
   }
+}
+
+/* Live Total Campaign Count Badge (소셜 프루프 펀딩 수 배지) */
+.campaign-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(255, 240, 243, 0.92) 0%, rgba(253, 235, 239, 0.95) 100%);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  padding: 8px 16px;
+  margin-top: 10px;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 500;
+  box-shadow: 0 3px 10px rgba(201, 134, 145, 0.12);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 380px;
+  transition: all 0.25s ease;
+}
+
+.campaign-count-badge[hidden] {
+  display: none !important;
+}
+
+.count-badge-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+  animation: heartPulse 1.8s ease-in-out infinite alternate;
+}
+
+.count-badge-text {
+  letter-spacing: -0.2px;
+}
+
+.count-badge-number {
+  color: var(--pink-deep);
+  font-family: var(--font-numeric);
+  font-size: 1.02rem;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.create-form-count-hint {
+  text-align: center;
+  margin: 10px 0 0 0;
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+}
+
+.create-form-count-hint strong {
+  color: var(--pink-deep);
+  font-family: var(--font-numeric);
+  font-weight: 800;
+}
+
+.create-form-count-hint[hidden] {
+  display: none !important;
+}
+
+@keyframes heartPulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.18); }
 }
 
 /* 1. Security Warning Box (⚠️ 보안 안내 — 간략 표시 + 접이식 상세) */

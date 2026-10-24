@@ -582,6 +582,14 @@
               <polyline points="19 12 12 19 5 12"></polyline>
             </svg>
           </a>
+
+          <!-- Live Total Created Campaign Count Badge -->
+          <div class="campaign-count-badge" id="campaignCountBadge" hidden aria-live="polite">
+            <span class="count-badge-icon" aria-hidden="true">💝</span>
+            <span class="count-badge-text">
+              지금까지 <strong class="count-badge-number" id="campaignCountNumber">0</strong>개의 펀딩이 만들어졌어요 ♡
+            </span>
+          </div>
         </div>
 
         <!-- ★ 보안 및 비밀번호 분실 주의 안내 (간략 표시 + 펼치기) -->
@@ -844,6 +852,11 @@
             <button type="submit" class="btn-primary btn-lg" id="createFundingSubmitBtn" style="width: 100%; margin-top: 12px;">
               ✨ 내 선물 펀딩 만들기 &amp; 고유 URL 발급받기
             </button>
+
+            <!-- Form bottom campaign count hint -->
+            <p class="create-form-count-hint" id="createFormCountHint" hidden>
+              💝 지금까지 <strong id="createFormCountNumber">0</strong>개의 펀딩이 만들어졌어요 ♡
+            </p>
           </form>
         </div>
 
