@@ -18,7 +18,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="cropper.min.css" />
   <link rel="stylesheet" href="styles.css" />
-  <!-- Prevent Flash of Main Content Before Intro Overlay -->
+  <!-- Prevent Flash of Main Content & Failsafe Watchdog Against Blank Screen -->
   <script>
     (function () {
       try {
@@ -26,22 +26,92 @@
         var fid = (params.get('f') || '').trim();
         if (!fid) {
           document.documentElement.classList.add('intro-skipped');
-          return;
-        }
-        var seen = sessionStorage.getItem('bday_intro_seen_v2_' + fid) === '1';
-        var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (seen || reduced) {
-          document.documentElement.classList.add('intro-skipped');
         } else {
-          document.documentElement.classList.add('intro-active');
+          var seen = false;
+          try {
+            seen = sessionStorage.getItem('bday_intro_seen_v2_' + fid) === '1';
+          } catch (storageErr) {}
+          var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          if (seen || reduced) {
+            document.documentElement.classList.add('intro-skipped');
+          } else {
+            document.documentElement.classList.add('intro-active');
+          }
         }
       } catch (e) {
         document.documentElement.classList.add('intro-skipped');
       }
+
+      // If intro is active, display celebration overlay as soon as DOM is ready so user doesn't wait on blank body
+      document.addEventListener('DOMContentLoaded', function () {
+        if (document.documentElement.classList.contains('intro-active')) {
+          var overlay = document.getElementById('birthdayIntroOverlay');
+          if (overlay) overlay.hidden = false;
+        }
+      });
+
+      // Failsafe watchdog timer: If the page remains blank/hidden after 3.8s, force-reveal content
+      window.__failsafeTimer = setTimeout(function () {
+        var cView = document.getElementById('createFundingView');
+        var fView = document.getElementById('fundingPageView');
+        var introOverlay = document.getElementById('birthdayIntroOverlay');
+        var isOverlayVisible = introOverlay && !introOverlay.hidden && introOverlay.style.display !== 'none';
+
+        if (!isOverlayVisible && cView && fView && cView.hidden && fView.hidden) {
+          document.documentElement.classList.remove('intro-active');
+          document.documentElement.classList.add('intro-skipped');
+          cView.hidden = false;
+          var alertBox = document.getElementById('initFallbackAlert');
+          if (alertBox) alertBox.hidden = false;
+        }
+      }, 3800);
+
+      // Global uncaught error listener to display friendly error guidance instead of blank screen
+      window.addEventListener('error', function (evt) {
+        try {
+          var cView = document.getElementById('createFundingView');
+          var fView = document.getElementById('fundingPageView');
+          if (cView && fView && cView.hidden && fView.hidden) {
+            document.documentElement.classList.remove('intro-active');
+            document.documentElement.classList.add('intro-skipped');
+            cView.hidden = false;
+            var alertBox = document.getElementById('initFallbackAlert');
+            if (alertBox) {
+              alertBox.hidden = false;
+              var msgSpan = document.getElementById('initFallbackErrMsg');
+              if (msgSpan && evt && evt.message) {
+                msgSpan.textContent = ' (' + evt.message + ')';
+              }
+            }
+          }
+        } catch (ignored) {}
+      });
     })();
   </script>
 </head>
 <body>
+  <!-- No-JavaScript Fallback Notice -->
+  <noscript>
+    <div style="background: #FFE8EC; color: #8A2D3C; padding: 16px 20px; text-align: center; font-size: 0.95rem; font-weight: 600; border-bottom: 2px solid #E593A3;">
+      ⚠️ personal_funding 서비스를 이용하려면 자바스크립트(JavaScript) 활성화가 필요합니다.
+    </div>
+  </noscript>
+
+  <!-- Emergency Failsafe Error Alert (Shown only if initialization fails or times out) -->
+  <div class="init-fallback-alert" id="initFallbackAlert" hidden role="alert">
+    <div class="container init-fallback-inner">
+      <span class="init-fallback-icon">⚠️</span>
+      <div class="init-fallback-text">
+        <strong>화면을 불러오는 중 일시적인 지연 또는 오류가 발생했습니다.</strong>
+        <span id="initFallbackErrMsg"></span>
+        <span class="init-fallback-sub">카카오톡 내장 브라우저 캐시나 네트워크 상태에 따라 발생할 수 있습니다. 아래 버튼을 눌러주세요.</span>
+      </div>
+      <div class="init-fallback-actions">
+        <button type="button" class="btn-secondary btn-xs" onclick="window.location.reload(true);">🔄 새로고침</button>
+        <button type="button" class="btn-primary btn-xs" onclick="window.location.href = window.location.pathname;">🏠 메인 홈으로</button>
+      </div>
+    </div>
+  </div>
   <!-- =====================================================================
        FULLSCREEN CELEBRATION INTRO OVERLAY (3.6s Auto Transition)
        ===================================================================== -->

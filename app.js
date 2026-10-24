@@ -807,8 +807,13 @@
         supabaseClient = window.supabase.createClient(cfg.url, cfg.anonKey, {
           auth: { persistSession: false }
         });
-        // 실제 REST 엔드포인트와 테이블 응답 가능 여부를 즉시 검증
-        const { error: pingErr } = await supabaseClient.from('campaigns').select('id').limit(1);
+        // 실제 REST 엔드포인트와 테이블 응답 가능 여부를 3.5초 타임아웃과 함께 검증 (모바일/카카오톡 지연 방지)
+        const pingPromise = supabaseClient.from('campaigns').select('id').limit(1);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Supabase ping timeout (3.5s)')), 3500)
+        );
+        const { error: pingErr } = await Promise.race([pingPromise, timeoutPromise]).catch((e) => ({ error: e }));
+
         if (pingErr) {
           lastSupabaseSyncError = pingErr.message || 'Supabase 테이블 조회 실패';
           console.warn('Supabase 연결 확인 실패:', pingErr);
@@ -872,42 +877,58 @@
   }
 
   async function routeToCurrentView(forcePlayIntro = false) {
-    currentCampaignId = getCampaignIdFromUrl();
+    try {
+      currentCampaignId = getCampaignIdFromUrl();
 
-    if (!currentCampaignId) {
-      isAdminAuthenticated = false;
-      isCurrentCampaignCloud = false;
-      finishBirthdayIntro();
-      updateViewModeUI();
-      checkFirstVisitGuideOnLoad();
-      return;
-    }
+      if (!currentCampaignId) {
+        isAdminAuthenticated = false;
+        isCurrentCampaignCloud = false;
+        finishBirthdayIntro();
+        updateViewModeUI();
+        checkFirstVisitGuideOnLoad();
+        return;
+      }
 
-    // Load campaign data from Supabase or Local Multi DB
-    let loadedOk = false;
-    if (isCloudConnected && supabaseClient) {
-      loadedOk = await fetchCampaignFromSupabase(currentCampaignId, false);
-      if (loadedOk) {
-        isCurrentCampaignCloud = true;
-        await verifyCurrentCampaignOwnerSession();
-        setupRealtimeForCurrentCampaign(currentCampaignId);
+      // Load campaign data from Supabase or Local Multi DB
+      let loadedOk = false;
+      if (isCloudConnected && supabaseClient) {
+        try {
+          loadedOk = await fetchCampaignFromSupabase(currentCampaignId, false);
+        } catch (fetchErr) {
+          console.warn('fetchCampaignFromSupabase error:', fetchErr);
+          loadedOk = false;
+        }
+        if (loadedOk) {
+          isCurrentCampaignCloud = true;
+          try {
+            await verifyCurrentCampaignOwnerSession();
+          } catch (sessionErr) {
+            console.warn('verifyCurrentCampaignOwnerSession error:', sessionErr);
+          }
+          setupRealtimeForCurrentCampaign(currentCampaignId);
+        } else {
+          loadedOk = loadCampaignFromLocalMultiDb(currentCampaignId);
+        }
       } else {
         loadedOk = loadCampaignFromLocalMultiDb(currentCampaignId);
       }
-    } else {
-      loadedOk = loadCampaignFromLocalMultiDb(currentCampaignId);
-    }
 
-    if (!loadedOk) {
-      showToast('해당 고유 ID의 펀딩을 찾을 수 없습니다. 새 펀딩을 만들어 보세요!');
-      navigateToHome();
-      return;
-    }
+      if (!loadedOk) {
+        showToast('해당 고유 ID의 펀딩을 찾을 수 없습니다. 새 펀딩을 만들어 보세요!');
+        navigateToHome();
+        return;
+      }
 
-    updateViewModeUI();
-    renderApp();
-    await prepareAndBindIntro();
-    startBirthdayIntroAnimation(forcePlayIntro);
+      updateViewModeUI();
+      renderApp();
+      await prepareAndBindIntro();
+      startBirthdayIntroAnimation(forcePlayIntro);
+    } catch (err) {
+      console.error('routeToCurrentView error:', err);
+      finishBirthdayIntro();
+      updateViewModeUI();
+      fallbackRecoveryOnStartup(err);
+    }
   }
 
   function setupRealtimeForCurrentCampaign(campaignId) {
@@ -1153,6 +1174,10 @@
   }
 
   function updateViewModeUI() {
+    if (window.__failsafeTimer) {
+      clearTimeout(window.__failsafeTimer);
+      window.__failsafeTimer = null;
+    }
     const isFundingView = Boolean(currentCampaignId);
     const createView = document.getElementById('createFundingView');
     const fundingView = document.getElementById('fundingPageView');
@@ -3083,29 +3108,6 @@
           </div>
           <p class="remit-app-help-text" style="margin-top: 10px;">
             💡 이용하시는 은행 앱(카카오뱅크, 국민, 신한, 토스 등)을 열고 복사한 계좌번호로 송금해 주세요. 펀딩 주인이 입금 확인 후 승인합니다.
-          </p>
-        </div>
-      `;
-    }
-        <div class="receipt-bank-highlight-card">
-          <span class="rb-badge">🏦 계좌이체 (무통장입금) 안내</span>
-          <div class="rb-account-row">
-            <span style="font-size: 0.95rem; color: var(--text-secondary);">${escapeHtml(bankName || '입금계좌')}:</span>
-            <strong style="color: var(--pink-deep); font-size: 1.25rem; letter-spacing: 0.5px;">${escapeHtml(bankAccount || '계좌 미등록')}</strong>
-          </div>
-          <div class="rb-holder-row">
-            예금주: <strong>${escapeHtml(campaign.hostName || '주인공')}</strong> &nbsp;·&nbsp; 보내실 금액: <strong style="color: var(--pink-deep);">${cleanAmountStr}</strong>
-          </div>
-          <div class="rb-actions-row">
-            <button type="button" class="btn-primary btn-copy-bank-large" id="receiptCopyBankMainBtn">
-              📋 계좌번호 복사하기
-            </button>
-            <button type="button" class="btn-secondary btn-copy-amount-large" id="receiptCopyAmountMainBtn">
-              📋 금액(${formatNumberKo(amount)}원) 복사
-            </button>
-          </div>
-          <p class="remit-app-help-text" style="margin-top: 10px;">
-            💡 은행 앱(카카오뱅크, 국민, 신한, 토스 등)에서 복사한 계좌번호로 송금해 주시면 펀딩 주인이 확인 후 승인합니다.
           </p>
         </div>
       `;
@@ -7076,15 +7078,42 @@
     });
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  function fallbackRecoveryOnStartup(err) {
     try {
-      localStorage.removeItem('bday_multi_recent_fundings_v1');
-    } catch (e) {}
+      finishBirthdayIntro();
+      updateViewModeUI();
+      const alertBox = document.getElementById('initFallbackAlert');
+      if (alertBox) {
+        alertBox.hidden = false;
+        const msg = document.getElementById('initFallbackErrMsg');
+        if (msg && err) msg.textContent = ` (${err.message || String(err)})`;
+      }
+    } catch (ignored) {}
+  }
+
+  function startApp() {
     try {
-      getFanfareAudioElement();
-    } catch (e) {}
-    migrateLegacyDeviceCampaigns();
-    bindEvents();
-    initSupabaseAndRoute();
-  });
+      try {
+        localStorage.removeItem('bday_multi_recent_fundings_v1');
+      } catch (e) {}
+      try {
+        getFanfareAudioElement();
+      } catch (e) {}
+      migrateLegacyDeviceCampaigns();
+      bindEvents();
+      initSupabaseAndRoute().catch((err) => {
+        console.warn('initSupabaseAndRoute async error:', err);
+        fallbackRecoveryOnStartup(err);
+      });
+    } catch (startupErr) {
+      console.error('Critical app startup error:', startupErr);
+      fallbackRecoveryOnStartup(startupErr);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startApp);
+  } else {
+    startApp();
+  }
 })();
