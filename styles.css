@@ -3777,6 +3777,42 @@ body:not(.is-admin-mode) .admin-only-ui {
   line-height: 1.45;
 }
 
+.bank-remit-guide-card {
+  background: var(--bg-surface);
+  border: 1.5px dashed var(--pink-dusty);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+
+.brg-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.brg-badge {
+  background: #FFF0F3;
+  color: var(--pink-deep);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  flex-shrink: 0;
+}
+
+.brg-header strong {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.brg-desc {
+  font-size: 0.79rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
 .bank-account-card {
   background: var(--bg-surface);
   border: 1.5px solid var(--border-strong);

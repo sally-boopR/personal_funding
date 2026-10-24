@@ -576,11 +576,15 @@
   }
 
   function getValidHttpUrl(rawUrl) {
-    const trimmed = String(rawUrl || '').trim();
+    let trimmed = String(rawUrl || '').trim();
     if (!trimmed) return null;
+    if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//i.test(trimmed)) {
+      trimmed = 'https://' + trimmed;
+    }
     try {
       const parsed = new URL(trimmed);
-      if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+      const allowedProtocols = ['http:', 'https:', 'kakaotalk:', 'kakaopay:', 'toss:', 'supertoss:'];
+      if (allowedProtocols.includes(parsed.protocol.toLowerCase())) {
         return parsed.href;
       }
     } catch (e) {
@@ -2930,7 +2934,7 @@
         optBank.hidden = !hasBank;
         const bankSub = document.getElementById('optRemitBankSubtitle');
         if (bankSub && hasBank) {
-          bankSub.textContent = bankName ? `${bankName} 계좌이체` : '은행 계좌번호 복사';
+          bankSub.textContent = '댓글 등록 후 계좌번호 확인';
         }
       }
 
@@ -2963,8 +2967,6 @@
     const previewBox = document.getElementById('selectedMethodPreviewBox');
     if (!previewBox) return;
 
-    const bankAccount = (campaign.bankAccount || '').trim();
-    const bankName = (campaign.bankName || '').trim();
     const cleanAmount = Math.max(0, Math.round(Number(document.getElementById('pledgeAmountInput')?.value) || 0));
     const btnTextEl = document.getElementById('submitPledgeBtnText');
 
@@ -2975,34 +2977,27 @@
       submitLabel = `💛 카카오페이로 ${cleanAmount > 0 ? formatKRW(cleanAmount) + ' ' : ''}송금하기`;
       previewHtml = `
         <div class="remit-method-guide-banner">
-          💛 <strong>카카오페이 송금:</strong> 아래 버튼을 누르면 <strong>응원 메시지가 먼저 안전하게 저장</strong>된 후 카카오페이 송금 앱(화면)으로 바로 연결됩니다.
+          💛 <strong>카카오페이 송금:</strong> 아래 버튼을 누르면 <strong>응원 메시지가 먼저 안전하게 저장</strong>된 후 카카오페이 송금 화면으로 바로 연결됩니다.
         </div>
       `;
     } else if (currentSelectedRemitMethod === 'toss') {
       submitLabel = `💙 토스로 ${cleanAmount > 0 ? formatKRW(cleanAmount) + ' ' : ''}송금하기`;
       previewHtml = `
         <div class="remit-method-guide-banner">
-          💙 <strong>토스 송금:</strong> 아래 버튼을 누르면 <strong>응원 메시지가 먼저 안전하게 저장</strong>된 후 토스 송금 앱(화면)으로 바로 연결됩니다.
+          💙 <strong>토스 송금:</strong> 아래 버튼을 누르면 <strong>응원 메시지가 먼저 안전하게 저장</strong>된 후 토스 송금 화면으로 바로 연결됩니다.
         </div>
       `;
     } else if (currentSelectedRemitMethod === 'bank') {
       submitLabel = `🏦 계좌 확인하고 ${cleanAmount > 0 ? formatKRW(cleanAmount) + ' ' : ''}송금하기`;
-      const fullBankLabel = bankName ? `${bankName} ${bankAccount}` : bankAccount;
       previewHtml = `
-        <div class="bank-account-card">
-          <div class="bank-account-info">
-            <span class="bank-badge">계좌송금</span>
-            <div class="bank-text-wrap">
-              <strong>${escapeHtml(fullBankLabel)}</strong>
-              <span class="bank-holder-text">예금주: <strong>${escapeHtml(campaign.hostName || '주인공')}</strong></span>
-            </div>
+        <div class="bank-remit-guide-card">
+          <div class="brg-header">
+            <span class="brg-badge">🏦 계좌이체 안내</span>
+            <strong>계좌번호는 신청 완료 후 바로 안내됩니다</strong>
           </div>
-          <button type="button" class="btn-copy-bank" id="copyBankPreviewBtn" data-bank-text="${escapeHtml(fullBankLabel)}">
-            📋 계좌 복사
-          </button>
-        </div>
-        <div class="remit-method-guide-banner" style="margin-top: 6px;">
-          🏦 <strong>계좌이체:</strong> 아래 버튼을 누르면 <strong>응원 메시지가 먼저 등록</strong>되고, 바로 송금하실 수 있도록 계좌번호와 금액 복사 화면이 크게 안내됩니다.
+          <p class="brg-desc">
+            아래 <strong>「계좌 확인하고 송금하기」</strong> 버튼을 누르면 <strong>응원 메시지와 후원 신청이 먼저 안전하게 저장</strong>되고, 바로 송금하실 수 있도록 <strong>은행명, 계좌번호, 예금주, 송금 금액 및 복사 버튼</strong>이 크게 안내됩니다.
+          </p>
         </div>
       `;
     }
@@ -3010,15 +3005,6 @@
     previewBox.innerHTML = previewHtml;
     if (btnTextEl && !isSubmittingPledge) {
       btnTextEl.textContent = submitLabel;
-    }
-
-    const copyBtn = document.getElementById('copyBankPreviewBtn');
-    if (copyBtn) {
-      copyBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        handleCopyBankAccount();
-      });
     }
   }
 
@@ -3041,12 +3027,12 @@
       html = `
         <div class="receipt-action-title">💛 카카오페이로 ${cleanAmountStr} 송금하기</div>
         <p class="receipt-action-desc">
-          아래 노란색 버튼을 눌러 카카오페이 앱(또는 모바일 웹)에서 <strong>${escapeHtml(campaign.hostName)}</strong>님에게 송금해 주세요.
+          아래 버튼을 눌러 카카오페이 송금 앱(화면)으로 바로 이동해 주세요.
         </p>
         <a href="${escapeHtml(validKakaoUrl)}" target="_blank" rel="noopener noreferrer" class="btn-kakao-open remit-action-hero-btn" id="receiptKakaoOpenBtn">
-          💛 카카오페이 송금 앱 열기
+          💛 카카오페이 송금 바로가기
         </a>
-        <p class="remit-app-help-text">💡 송금 앱이 자동으로 열리지 않았다면 위 노란색 버튼을 한 번 더 눌러주세요.</p>
+        <p class="remit-app-help-text">💡 팝업 차단 등으로 송금 화면이 자동으로 열리지 않았다면 위 버튼을 직접 눌러주세요.</p>
         ${
           hasBank
             ? `<div class="receipt-alt-bank-box">
@@ -3060,12 +3046,12 @@
       html = `
         <div class="receipt-action-title">💙 토스(Toss)로 ${cleanAmountStr} 송금하기</div>
         <p class="receipt-action-desc">
-          아래 파란색 버튼을 눌러 토스 앱에서 <strong>${escapeHtml(campaign.hostName)}</strong>님에게 송금해 주세요.
+          아래 버튼을 눌러 토스 송금 앱(화면)으로 바로 이동해 주세요.
         </p>
         <a href="${escapeHtml(validTossUrl)}" target="_blank" rel="noopener noreferrer" class="btn-toss-open remit-action-hero-btn" id="receiptTossOpenBtn">
-          💙 토스 송금 앱 열기
+          💙 토스 송금 바로가기
         </a>
-        <p class="remit-app-help-text">💡 송금 앱이 자동으로 열리지 않았다면 위 파란색 버튼을 한 번 더 눌러주세요.</p>
+        <p class="remit-app-help-text">💡 팝업 차단 등으로 송금 화면이 자동으로 열리지 않았다면 위 버튼을 직접 눌러주세요.</p>
         ${
           hasBank
             ? `<div class="receipt-alt-bank-box">
@@ -3078,6 +3064,29 @@
     } else {
       // Bank transfer
       html = `
+        <div class="receipt-bank-highlight-card">
+          <span class="rb-badge">🏦 계좌이체 (무통장입금) 안내</span>
+          <div class="rb-account-row">
+            <span style="font-size: 0.95rem; color: var(--text-secondary);">${escapeHtml(bankName || '입금계좌')}:</span>
+            <strong style="color: var(--pink-deep); font-size: 1.25rem; letter-spacing: 0.5px;">${escapeHtml(bankAccount || '계좌 미등록')}</strong>
+          </div>
+          <div class="rb-holder-row">
+            예금주: <strong>${escapeHtml(campaign.hostName || '주인공')}</strong> &nbsp;·&nbsp; 보내실 금액: <strong style="color: var(--pink-deep);">${cleanAmountStr}</strong>
+          </div>
+          <div class="rb-actions-row">
+            <button type="button" class="btn-primary btn-copy-bank-large" id="receiptCopyBankMainBtn">
+              📋 계좌번호 복사하기
+            </button>
+            <button type="button" class="btn-secondary btn-copy-amount-large" id="receiptCopyAmountMainBtn">
+              📋 금액(${formatNumberKo(amount)}원) 복사
+            </button>
+          </div>
+          <p class="remit-app-help-text" style="margin-top: 10px;">
+            💡 이용하시는 은행 앱(카카오뱅크, 국민, 신한, 토스 등)을 열고 복사한 계좌번호로 송금해 주세요. 펀딩 주인이 입금 확인 후 승인합니다.
+          </p>
+        </div>
+      `;
+    }
         <div class="receipt-bank-highlight-card">
           <span class="rb-badge">🏦 계좌이체 (무통장입금) 안내</span>
           <div class="rb-account-row">
@@ -3278,38 +3287,55 @@
     }
 
     if (!Number.isFinite(rawAmount) || amount < 1000 || amount > 50000000) {
-      errorEl.textContent = '펀딩 금액은 최소 1,000원 이상 ~ 5,000만 원 이하로 유효하게 입력해주세요.';
+      const msg = '펀딩 금액은 최소 1,000원 이상 ~ 5,000만 원 이하로 유효하게 입력해주세요.';
+      errorEl.textContent = msg;
       errorEl.hidden = false;
+      showToast(`⚠️ ${msg}`);
+      document.getElementById('pledgeAmountInput')?.focus();
       return;
     }
     if (hasSelectedPhoto && !consentChecked) {
-      errorEl.textContent = '프로필 사진을 등록하려면 공개 페이지 사진 게시 동의에 체크해 주세요.';
+      const msg = '프로필 사진을 등록하려면 공개 페이지 사진 게시 동의에 체크해 주세요.';
+      errorEl.textContent = msg;
       errorEl.hidden = false;
-      document.getElementById('pledgePhotoConsentCheck').focus();
+      showToast(`⚠️ ${msg}`);
+      document.getElementById('pledgePhotoConsentCheck')?.focus();
       return;
     }
     if (hasSelectedPhoto && selfPin.length < 4) {
-      errorEl.textContent = '본인만 프로필 사진을 수정·삭제할 수 있도록 4자리 이상의 비밀번호를 입력해 주세요.';
+      const msg = '본인만 프로필 사진을 수정·삭제할 수 있도록 4자리 이상의 비밀번호를 입력해 주세요.';
+      errorEl.textContent = msg;
       errorEl.hidden = false;
-      document.getElementById('pledgeSelfPinInput').focus();
+      showToast(`⚠️ ${msg}`);
+      document.getElementById('pledgeSelfPinInput')?.focus();
       return;
     }
     if (!hasSelectedPhoto && selfPin.length > 0 && selfPin.length < 4) {
-      errorEl.textContent = '비밀번호를 설정하려면 4자리 이상 입력해 주세요.';
+      const msg = '비밀번호를 설정하려면 4자리 이상 입력해 주세요.';
+      errorEl.textContent = msg;
       errorEl.hidden = false;
-      document.getElementById('pledgeSelfPinInput').focus();
+      showToast(`⚠️ ${msg}`);
+      document.getElementById('pledgeSelfPinInput')?.focus();
       return;
     }
     if (!senderName) {
-      errorEl.textContent = '실제 입금 확인을 위해 보내는 분(입금자) 이름을 입력해주세요.';
+      const msg = '실제 입금 확인을 위해 보내는 분(입금자) 이름을 입력해주세요.';
+      errorEl.textContent = msg;
       errorEl.hidden = false;
-      document.getElementById('pledgeSenderName').focus();
+      showToast(`⚠️ ${msg}`);
+      const senderInp = document.getElementById('pledgeSenderName');
+      senderInp?.focus();
+      senderInp?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     if (!message) {
-      errorEl.textContent = `${state.campaign.hostName}님에게 전할 응원 메시지를 입력해주세요.`;
+      const msg = `${state.campaign.hostName}님에게 전할 응원 메시지를 입력해주세요.`;
+      errorEl.textContent = msg;
       errorEl.hidden = false;
-      document.getElementById('pledgeMessageInput').focus();
+      showToast(`⚠️ ${msg}`);
+      const msgInp = document.getElementById('pledgeMessageInput');
+      msgInp?.focus();
+      msgInp?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
@@ -3319,14 +3345,51 @@
     const validToss = getValidHttpUrl(state.campaign.tossRemitUrl);
     const hasBank = Boolean((state.campaign.bankAccount || '').trim());
 
-    if (!validKakao && !validToss && !hasBank) {
-      errorEl.textContent = '펀딩 주인에게 아직 등록된 송금 계좌나 링크가 없습니다. 펀딩 주인에게 문의해 주세요.';
+    if (chosenMethod === 'kakao' && !validKakao) {
+      const msg = '펀딩 주인에게 카카오페이 송금 링크가 등록되지 않았습니다. 다른 송금 방법을 선택해 주세요.';
+      errorEl.textContent = msg;
       errorEl.hidden = false;
+      showToast(`⚠️ ${msg}`);
+      return;
+    }
+    if (chosenMethod === 'toss' && !validToss) {
+      const msg = '펀딩 주인에게 토스 송금 링크가 등록되지 않았습니다. 다른 송금 방법을 선택해 주세요.';
+      errorEl.textContent = msg;
+      errorEl.hidden = false;
+      showToast(`⚠️ ${msg}`);
+      return;
+    }
+    if (chosenMethod === 'bank' && !hasBank) {
+      const msg = '펀딩 주인에게 계좌번호가 등록되지 않았습니다. 다른 송금 방법을 선택해 주세요.';
+      errorEl.textContent = msg;
+      errorEl.hidden = false;
+      showToast(`⚠️ ${msg}`);
+      return;
+    }
+    if (!validKakao && !validToss && !hasBank) {
+      const msg = '펀딩 주인에게 아직 등록된 송금 계좌나 링크가 없습니다. 펀딩 주인에게 문의해 주세요.';
+      errorEl.textContent = msg;
+      errorEl.hidden = false;
+      showToast(`⚠️ ${msg}`);
       return;
     }
 
     isSubmittingPledge = true;
     submitBtn.disabled = true;
+    if (submitBtnText) {
+      submitBtnText.textContent = '☁️ 후원 신청 및 응원 메시지 저장 중...';
+    }
+
+    // Attempt popup pre-open for desktop browsers to overcome post-async popup blockers
+    let popupWin = null;
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (!isMobile && (chosenMethod === 'kakao' || chosenMethod === 'toss')) {
+      try {
+        popupWin = window.open('about:blank', '_blank');
+      } catch (e) {
+        popupWin = null;
+      }
+    }
 
     let finalAvatarUrl = pledgeAvatarDataUrl || '';
 
@@ -3416,6 +3479,12 @@
       document.getElementById('pledgeFormView').hidden = true;
       document.getElementById('pledgeReceiptView').hidden = false;
 
+      // Scroll modal card to top so receipt view is immediately visible
+      const modalCard = document.querySelector('#pledgeModalBackdrop .modal-card');
+      if (modalCard) {
+        modalCard.scrollTop = 0;
+      }
+
       // Clear input fields
       document.getElementById('pledgeSenderName').value = '';
       document.getElementById('pledgeMessageInput').value = '';
@@ -3437,25 +3506,39 @@
       }
 
       if (targetRemitUrl) {
-        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        try {
-          if (isMobile) {
+        if (isMobile) {
+          try {
             window.location.href = targetRemitUrl;
+          } catch (e) {}
+        } else {
+          if (popupWin && !popupWin.closed) {
+            try {
+              popupWin.location.href = targetRemitUrl;
+            } catch (e) {
+              try { window.open(targetRemitUrl, '_blank', 'noopener,noreferrer'); } catch (err2) {}
+            }
           } else {
-            window.open(targetRemitUrl, '_blank', 'noopener,noreferrer');
+            try {
+              window.open(targetRemitUrl, '_blank', 'noopener,noreferrer');
+            } catch (openErr) {
+              console.log('[Remit] Direct link available on receipt view if popup blocked.');
+            }
           }
-        } catch (openErr) {
-          console.warn('[Remit] Automatic redirect was blocked by browser:', openErr);
         }
       }
     } catch (err) {
+      if (popupWin && !popupWin.closed) {
+        try { popupWin.close(); } catch (e) {}
+      }
       errorEl.textContent = `후원 신청 저장 오류: ${err.message || '처리 중 오류가 발생했습니다'}. 다시 시도해 주세요.`;
       errorEl.hidden = false;
+      showToast(`⚠️ 저장 오류: ${err.message || '다시 시도해 주세요.'}`);
+      errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       if (submitBtnText) submitBtnText.textContent = '🔄 다시 시도하기';
     } finally {
       isSubmittingPledge = false;
       submitBtn.disabled = false;
-      updatePledgeAmountUI(amount, false);
+      updateSelectedRemitMethodPreview();
     }
   }
 
